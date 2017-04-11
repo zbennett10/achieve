@@ -78,7 +78,10 @@ update msg model =
               
 
         AddScore goal ->
-            { model | score = model.score + Result.withDefault 0 (String.toInt goal.value) }
+            if goal.completed == False then
+                { model | score = model.score + Result.withDefault 0 (String.toInt goal.value) }
+            else
+                model
 
         SendGoalName name ->
             { model | currentGoalName = name }
@@ -122,7 +125,7 @@ view model =
                 div [class "col-lg-4 col-md-4"]
                     [
                         h1 [ class "text-center" ] [ text "My Goals" ],
-                        renderGoalsAgain model.goals
+                        renderGoals model.goals
                     ],
                 div [ class "col-lg-4 col-mid-4" ]
                     [
@@ -152,16 +155,6 @@ createNewID id =
 
 renderGoals : List Goal -> Html Msg
 renderGoals goals =
-    ul [ class "list-unstyled text-center"]
-        (List.map 
-                (\goal -> 
-                    li [ class "list-item"] 
-                    [ text goal.name, text " - ", text goal.value ]
-                ) 
-        goals)
-
-renderGoalsAgain : List Goal -> Html Msg
-renderGoalsAgain goals =
     ul [class "list-unstyled text-center"]
         (List.map 
                 (\goal -> 
@@ -169,7 +162,7 @@ renderGoalsAgain goals =
                     [ 
                         label [] 
                         [ 
-                            input [class "form-control", type_ "checkbox" ] [], 
+                            input [class "form-control", type_ "checkbox", onClick (AddScore goal) ] [], 
                             text ((toString goal.name) ++ " - "), text goal.value 
                         ] 
                     ]) 
