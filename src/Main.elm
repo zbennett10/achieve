@@ -1,18 +1,19 @@
 import Html exposing (..)
-import Html.Events exposing (onClick, onInput)
+import Html.Events exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onWithOptions, targetChecked, on)
 import Json.Decode as Json
+
 
 --MAIN--
 main : Program Never Model Action
 main =
-    Html.beginnerProgram
-     { 
-         model = model,
-         view  = view,
-         update = update
-     }
+    program
+        { 
+            init = init,
+            view  = view,
+            update = update,
+            subscriptions = subscriptions
+        }
 
 -- MODEL--
 type alias Goal =
@@ -31,15 +32,15 @@ type alias Model =
         currentGoalScore : String
     }
 
---Inital Model State
-model : Model
-model = 
-    { 
+--INIT
+init : (Model, Cmd Action)
+init = 
+    ({ 
         score = 1000,
         goals = [Goal 1 "Love Kalie Forever" "100" False],
         currentGoalName = "",
         currentGoalScore = ""
-    }
+    }, Cmd.none)
 
 --ACTION TYPES--
 type Action = NoOp
@@ -52,13 +53,13 @@ type Action = NoOp
 
 --UPDATE--
 
-update : Action -> Model -> Model
+update : Action -> Model -> ( Model, Cmd Action )
 update action model =
     case action of
         NoOp ->
-            model
+            (model, Cmd.none)
         AddGoal name score ->
-            { model | goals = model.goals ++ [Goal (createNewID (findMaxID model.goals)) name score False] }
+            ({ model | goals = model.goals ++ [Goal (createNewID (findMaxID model.goals)) name score False] }, Cmd.none)
         ToggleGoalComplete id status ->
             let
               newGoals =
@@ -71,7 +72,7 @@ update action model =
                     )
                     model.goals
             in
-                { model | goals = newGoals }
+                ({ model | goals = newGoals }, Cmd.none)
         UpdateGoalName id newName ->
             let
               newGoals =
@@ -84,40 +85,24 @@ update action model =
                     )
                     model.goals
             in
-                { model | goals = newGoals }
+                ({ model | goals = newGoals }, Cmd.none)
               
         ToggleScore goal ->
             if goal.completed == False then
-                { model | 
-                    score = model.score + Result.withDefault 0 (String.toInt goal.value) }
+                ({ model | 
+                    score = model.score + Result.withDefault 0 (String.toInt goal.value) }, Cmd.none)
             else
-                { model | score = model.score - Result.withDefault 0 (String.toInt goal.value) }
+                ({ model | score = model.score - Result.withDefault 0 (String.toInt goal.value) }, Cmd.none)
 
         ChangeCurrentGoalName name ->
-            { model | currentGoalName = name }
+            ({ model | currentGoalName = name }, Cmd.none)
         ChangeCurrentGoalScore score ->
-            { model | currentGoalScore = score }
+            ({ model | currentGoalScore = score }, Cmd.none)
 
---MAILBOXES--
-
-{-inbox : Signal.Mailbox Action --this inbox stores a Mailbox type that stores Actions
-inbox =
-    Signal.mailbox NoOp --set initial value of mailbox // mailboxes return a record with the keys address and signal
-    --inbox.address gives address of mailbox with initial value
-    --inbox.signal gives signal of values getting stored in mailbox
-
-modelSignal : Signal Model
-modelSignal =
-    Signal.foldp update model inbox.signal
-
-    --}
-
-
--- view : Signal.Address Action -> Model -> Html
--- view address person =
---     div [] [
---         h2 [] 
---     ]
+--SUBSCRIPTIONS--
+subscriptions : Model -> Sub Action
+subscriptions model =
+    Sub.none
 
 
 
