@@ -1,11 +1,11 @@
 import Html exposing (..)
 import Html.Events exposing (onClick, onInput)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onWithOptions)
+import Html.Events exposing (onWithOptions, targetChecked, on)
 import Json.Decode as Json
 
-
-main : Program Never Model Msg
+--MAIN--
+main : Program Never Model Action
 main =
     Html.beginnerProgram
      { 
@@ -14,8 +14,7 @@ main =
          update = update
      }
 
-
--- Model
+-- MODEL--
 type alias Goal =
     { 
         id : Int,
@@ -32,11 +31,7 @@ type alias Model =
         currentGoalScore : String
     }
 
-type alias RecordWithID =
-    {
-        id : Int
-    }
-
+--Inital Model State
 model : Model
 model = 
     { 
@@ -46,29 +41,44 @@ model =
         currentGoalScore = ""
     }
 
+--ACTION TYPES--
+type Action = NoOp
+    | AddGoal String String
+    | ToggleGoalComplete Int Bool
+    | UpdateGoalName Int String
+    | ToggleScore Goal
+    | ChangeCurrentGoalName String
+    | ChangeCurrentGoalScore String
 
---Update
-type Msg =
-   AddGoal String String
-   | CompleteGoal Int
-   | AddScore Goal
-   | SendGoalName String
-   | SendGoalScore String
+--UPDATE--
 
-
-update : Msg -> Model -> Model
-update msg model = 
-    case msg of
+update : Action -> Model -> Model
+update action model =
+    case action of
+        NoOp ->
+            model
         AddGoal name score ->
             { model | goals = model.goals ++ [Goal (createNewID (findMaxID model.goals)) name score False] }
-
-        CompleteGoal id ->
+        ToggleGoalComplete id status ->
             let
               newGoals =
                 List.map
                     (\goal ->
                         if goal.id == id then
-                            { goal | completed = True }
+                            { goal | completed = status }
+                        else
+                            goal
+                    )
+                    model.goals
+            in
+                { model | goals = newGoals }
+        UpdateGoalName id newName ->
+            let
+              newGoals =
+                List.map
+                    (\goal ->
+                        if goal.id == id then
+                            { goal | name = newName }
                         else
                             goal
                     )
@@ -76,23 +86,42 @@ update msg model =
             in
                 { model | goals = newGoals }
               
-
-        AddScore goal ->
+        ToggleScore goal ->
             if goal.completed == False then
-                { model | score = model.score + Result.withDefault 0 (String.toInt goal.value) }
+                { model | 
+                    score = model.score + Result.withDefault 0 (String.toInt goal.value) }
             else
-                model
+                { model | score = model.score - Result.withDefault 0 (String.toInt goal.value) }
 
-        SendGoalName name ->
+        ChangeCurrentGoalName name ->
             { model | currentGoalName = name }
-
-        SendGoalScore score ->
+        ChangeCurrentGoalScore score ->
             { model | currentGoalScore = score }
 
+--MAILBOXES--
 
-            
+{-inbox : Signal.Mailbox Action --this inbox stores a Mailbox type that stores Actions
+inbox =
+    Signal.mailbox NoOp --set initial value of mailbox // mailboxes return a record with the keys address and signal
+    --inbox.address gives address of mailbox with initial value
+    --inbox.signal gives signal of values getting stored in mailbox
 
---view
+modelSignal : Signal Model
+modelSignal =
+    Signal.foldp update model inbox.signal
+
+    --}
+
+
+-- view : Signal.Address Action -> Model -> Html
+-- view address person =
+--     div [] [
+--         h2 [] 
+--     ]
+
+
+
+--VIEW--
 
 type alias Options =
     {
@@ -100,7 +129,7 @@ type alias Options =
         preventDefault : Bool
     }
 
-view : Model -> Html Msg
+view : Model -> Html Action
 view model = 
     div [ class "container" ]
         [ 
@@ -116,9 +145,9 @@ view model =
                         Html.form [ class "form-group" ]
                             [ 
                                 label [ for "goalNameInput" ] [ text "Goal: " ],
-                                input [ id "goalNameInput", class "form-control", onInput SendGoalName ] [],
+                                input [ id "goalNameInput", class "form-control", onInput ChangeCurrentGoalName ] [],
                                 label [ for "goalScoreInput" ] [ text "Goal Value: " ],
-                                input [ id "goalScoreInput", class "form-control", onInput SendGoalScore  ] [],
+                                input [ id "goalScoreInput", class "form-control", onInput ChangeCurrentGoalScore  ] [],
                                 button [class "btn btn-md btn primary", onWithOptions "click" (Options False True) (Json.succeed (AddGoal model.currentGoalName model.currentGoalScore)) ] [text "Submit"] 
                             ]
                     ],
@@ -139,6 +168,29 @@ view model =
         ]
 
 
+renderGoals : List Goal -> Html Action
+renderGoals goals =
+    ul [class "list-unstyled text-center"]
+        (List.map 
+                (\goal -> 
+                    li [ class "list-item" ] 
+                    [ 
+                        label [] 
+                        [ 
+                            input [class "form-control", type_ "checkbox", onClick (ToggleScore goal) ] [], 
+                            text ((toString goal.name) ++ " - "), text goal.value 
+                        ] 
+                    ]) 
+        goals)
+
+
+--HELPERS--
+
+updateGoalComplete : Goal -> Bool -> Goal
+updateGoalComplete goal value =
+    {goal | completed = value }
+
+
 --searches through a list of records and finds the max id present
 findMaxID : List Goal -> Int
 findMaxID records = 
@@ -153,18 +205,4 @@ createNewID id =
     id + 1
 
 
-renderGoals : List Goal -> Html Msg
-renderGoals goals =
-    ul [class "list-unstyled text-center"]
-        (List.map 
-                (\goal -> 
-                    li [ class "list-item" ] 
-                    [ 
-                        label [] 
-                        [ 
-                            input [class "form-control", type_ "checkbox", onClick (AddScore goal) ] [], 
-                            text ((toString goal.name) ++ " - "), text goal.value 
-                        ] 
-                    ]) 
-        goals)
         
