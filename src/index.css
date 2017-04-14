@@ -1,0 +1,16 @@
+body {
+    background: #E7F3FF;
+}
+
+.large-cursive-title {
+    font-family: 'Lobster', cursive !important;
+    font-size: 110px !important;
+    text-decoration: underline;
+    color: white !important;
+}
+
+.jumbotron {
+    background: #1F5846;
+    border-radius: 0 0 250px 250px !important;
+    border: 5px solid white;
+}

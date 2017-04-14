@@ -2,6 +2,8 @@ import Html exposing (..)
 import Html.Events exposing (..)
 import Html.Attributes exposing (..)
 import Json.Decode as Json
+import Date exposing (..)
+import Task exposing (..)
 
 
 --MAIN--
@@ -21,7 +23,8 @@ type alias Goal =
         id : Int,
         name : String,
         value : String, 
-        completed : Bool
+        completed : Bool,
+        deadline : String
     }
 
 type alias Model =
@@ -29,7 +32,8 @@ type alias Model =
         score : Int,
         goals : List Goal,
         currentGoalName : String,
-        currentGoalScore : String
+        currentGoalScore : String,
+        currentDeadline : String
     }
 
 --INIT
@@ -37,19 +41,21 @@ init : (Model, Cmd Msg)
 init = 
     ({ 
         score = 1000,
-        goals = [Goal 1 "Love Kalie Forever" "100" False],
+        goals = [Goal 1 "Love Kalie Forever" "100" False "October 11, 2017"],
         currentGoalName = "",
-        currentGoalScore = ""
+        currentGoalScore = "",
+        currentDeadline =  "October 11, 2017"
     }, Cmd.none)
 
 --ACTION TYPES--
 type Msg = NoOp
-    | AddGoal String String
+    | AddGoal String String String
     | ToggleGoalComplete Int Bool
     | UpdateGoalName Int String
     | ToggleScore Goal
     | ChangeCurrentGoalName String
     | ChangeCurrentGoalScore String
+    | ChangeCurrentDeadline String
 
 --UPDATE--
 
@@ -58,8 +64,8 @@ update msg model =
     case msg of
         NoOp ->
             (model, Cmd.none)
-        AddGoal name score ->
-            ({ model | goals = model.goals ++ [Goal (createNewID (findMaxID model.goals)) name score False] }, Cmd.none)
+        AddGoal name score deadline ->
+            ({ model | goals = model.goals ++ [Goal (createNewID (findMaxID model.goals)) name score False deadline] }, Cmd.none)
         ToggleGoalComplete id status ->
             let
               newGoals =
@@ -89,7 +95,7 @@ update msg model =
               
         ToggleScore goal -> 
             if goal.completed == False then
-                { model | score = model.score + Result.withDefault 0 (String.toInt goal.value) } --update model score and update goal complete
+                { model | score = model.score + Result.withDefault 0 (String.toInt goal.value) } --update model score and recursively update goal complete
                 |> update (ToggleGoalComplete goal.id True)
             else
                 { model | score = model.score - Result.withDefault 0 (String.toInt goal.value) }
@@ -99,6 +105,8 @@ update msg model =
             ({ model | currentGoalName = name }, Cmd.none)
         ChangeCurrentGoalScore score ->
             ({ model | currentGoalScore = score }, Cmd.none)
+        ChangeCurrentDeadline dateString ->
+            ({ model | currentDeadline = dateString }, Cmd.none)
 
 --SUBSCRIPTIONS--
 subscriptions : Model -> Sub Msg
@@ -121,20 +129,22 @@ view model =
         [ 
             div [ class "jumbotron text-center" ] 
                 [ 
-                    h1 [] [ text "Achieve" ]
+                    h1 [ class "large-cursive-title" ] [ text "Achieve." ]
                 ],
             div [ class "row" ]
             [ 
                 div [ class "col-lg-4 col-md-4" ]
                     [ 
-                        h1 [ class "text=center" ] [ text "New Goal: " ],
+                        h1 [ class "text-center" ] [ text "New Goal: " ],
                         Html.form [ class "form-group" ]
                             [ 
                                 label [ for "goalNameInput" ] [ text "Goal: " ],
                                 input [ id "goalNameInput", class "form-control", onInput ChangeCurrentGoalName ] [],
                                 label [ for "goalScoreInput" ] [ text "Goal Value: " ],
                                 input [ id "goalScoreInput", class "form-control", onInput ChangeCurrentGoalScore  ] [],
-                                button [class "btn btn-md btn primary", onWithOptions "click" (Options False True) (Json.succeed (AddGoal model.currentGoalName model.currentGoalScore)) ] [text "Submit"] 
+                                label [ for "deadlineInput"] [ text "Deadline: " ],
+                                input [ id "deadlineInput", class "form-control", type_ "date", onInput ChangeCurrentDeadline ] [],
+                                button [class "btn btn-md btn primary", onWithOptions "click" (Options False True) (Json.succeed (AddGoal model.currentGoalName model.currentGoalScore model.currentDeadline)) ] [text "Submit"] 
                             ]
                     ],
                 div [class "col-lg-4 col-md-4"]
@@ -150,6 +160,13 @@ view model =
                                 h2 [ class "text-center" ] [ text (toString model.score) ]  
                             ]
                     ]
+            ],
+            div [class "row" ]
+            [
+                div [ class "container" ]
+                [
+                    h1 [ class "center-text large-cursive-title" ] [ text model.currentDeadline ]
+                ]
             ]
         ]
 
