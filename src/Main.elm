@@ -5,7 +5,7 @@ import Json.Decode as Json
 
 
 --MAIN--
-main : Program Never Model Action
+main : Program Never Model Msg
 main =
     program
         { 
@@ -33,7 +33,7 @@ type alias Model =
     }
 
 --INIT
-init : (Model, Cmd Action)
+init : (Model, Cmd Msg)
 init = 
     ({ 
         score = 1000,
@@ -43,7 +43,7 @@ init =
     }, Cmd.none)
 
 --ACTION TYPES--
-type Action = NoOp
+type Msg = NoOp
     | AddGoal String String
     | ToggleGoalComplete Int Bool
     | UpdateGoalName Int String
@@ -53,9 +53,9 @@ type Action = NoOp
 
 --UPDATE--
 
-update : Action -> Model -> ( Model, Cmd Action )
-update action model =
-    case action of
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
         NoOp ->
             (model, Cmd.none)
         AddGoal name score ->
@@ -87,12 +87,13 @@ update action model =
             in
                 ({ model | goals = newGoals }, Cmd.none)
               
-        ToggleScore goal ->
+        ToggleScore goal -> 
             if goal.completed == False then
-                ({ model | 
-                    score = model.score + Result.withDefault 0 (String.toInt goal.value) }, Cmd.none)
+                { model | score = model.score + Result.withDefault 0 (String.toInt goal.value) } --update model score and update goal complete
+                |> update (ToggleGoalComplete goal.id True)
             else
-                ({ model | score = model.score - Result.withDefault 0 (String.toInt goal.value) }, Cmd.none)
+                { model | score = model.score - Result.withDefault 0 (String.toInt goal.value) }
+                |> update (ToggleGoalComplete goal.id False)
 
         ChangeCurrentGoalName name ->
             ({ model | currentGoalName = name }, Cmd.none)
@@ -100,7 +101,7 @@ update action model =
             ({ model | currentGoalScore = score }, Cmd.none)
 
 --SUBSCRIPTIONS--
-subscriptions : Model -> Sub Action
+subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.none
 
@@ -114,7 +115,7 @@ type alias Options =
         preventDefault : Bool
     }
 
-view : Model -> Html Action
+view : Model -> Html Msg
 view model = 
     div [ class "container" ]
         [ 
@@ -153,7 +154,7 @@ view model =
         ]
 
 
-renderGoals : List Goal -> Html Action
+renderGoals : List Goal -> Html Msg
 renderGoals goals =
     ul [class "list-unstyled text-center"]
         (List.map 
