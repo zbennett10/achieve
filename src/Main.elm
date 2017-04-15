@@ -44,7 +44,7 @@ init =
         goals = [Goal 1 "Love Kalie Forever" "100" False "October 11, 2017"],
         currentGoalName = "",
         currentGoalScore = "",
-        currentDeadline =  "October 11, 2017"
+        currentDeadline =  ""
     }, Cmd.none)
 
 --ACTION TYPES--
@@ -132,8 +132,15 @@ view model =
                     h1 [ class "large-cursive-title" ] [ text "Achieve." ]
                 ],
             div [ class "row" ]
+                [
+                    
+                    h1 [ class "text-center" ] [ text "Overall Score" ],
+                    h2 [ class "text-center" ] [ text (toString model.score) ]  
+                
+                ],
+            div [ class "row" ]
             [ 
-                div [ class "col-lg-4 col-md-4" ]
+                div [ class "col-lg-6 col-md-6" ]
                     [ 
                         h1 [ class "text-center" ] [ text "New Goal: " ],
                         Html.form [ class "form-group" ]
@@ -147,18 +154,10 @@ view model =
                                 button [class "btn btn-md btn primary", onWithOptions "click" (Options False True) (Json.succeed (AddGoal model.currentGoalName model.currentGoalScore model.currentDeadline)) ] [text "Submit"] 
                             ]
                     ],
-                div [class "col-lg-4 col-md-4"]
+                div [class "col-lg-6 col-md-6"]
                     [
-                        h1 [ class "text-center" ] [ text "My Goals" ],
+                        h1 [ class "text-center" ] [ text "Upcoming Goals" ],
                         renderGoals model.goals
-                    ],
-                div [ class "col-lg-4 col-mid-4" ]
-                    [
-                        div [class "row"]
-                            [
-                                h1 [ class "text-center" ] [ text "Score" ],
-                                h2 [ class "text-center" ] [ text (toString model.score) ]  
-                            ]
                     ]
             ],
             div [class "row" ]
@@ -180,7 +179,8 @@ renderGoals goals =
                     [ 
                         label [] 
                         [ 
-                            input [class "form-control", type_ "checkbox", onClick (ToggleScore goal) ] [], 
+                            input [class "form-control", type_ "checkbox", onClick (ToggleScore goal) ] [],
+                            h1 [ class "text-center" ] [text goal.deadline],
                             text ((toString goal.name) ++ " - "), text goal.value 
                         ] 
                     ]) 
