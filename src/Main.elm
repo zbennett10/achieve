@@ -1,9 +1,14 @@
+--API
+port module Main exposing (..)
+
 import Html exposing (..)
 import Html.Events exposing (..)
 import Html.Attributes exposing (..)
 import Json.Decode as Json
 import Date exposing (..)
-import Task exposing (..)
+import DatePicker exposing (..)
+import Date.Extra.Format as DateFormat exposing (format)
+import Date.Extra.Config.Config_en_us as DateConfig exposing (config)
 
 
 --MAIN--
@@ -24,7 +29,7 @@ type alias Goal =
         name : String,
         value : String, 
         completed : Bool,
-        deadline : String
+        deadline : Date
     }
 
 type alias Model =
@@ -33,18 +38,19 @@ type alias Model =
         goals : List Goal,
         currentGoalName : String,
         currentGoalScore : String,
-        currentDeadline : String
+        currentDeadline : Date
     }
 
 --INIT
+initialGoalDeadline = Date.fromString "October 11, 1991" |> Result.withDefault (Date.fromTime 0)
 init : (Model, Cmd Msg)
 init = 
     ({ 
         score = 1000,
-        goals = [Goal 1 "Love Kalie Forever" "100" False "October 11, 2017"],
+        goals = [Goal 1 "Love Kalie Forever" "100" False initialGoalDeadline],
         currentGoalName = "",
         currentGoalScore = "",
-        currentDeadline =  ""
+        currentDeadline =  Date.fromTime 0
     }, Cmd.none)
 
 --ACTION TYPES--
@@ -65,7 +71,7 @@ update msg model =
         NoOp ->
             (model, Cmd.none)
         AddGoal name score deadline ->
-            ({ model | goals = model.goals ++ [Goal (createNewID (findMaxID model.goals)) name score False deadline] }, Cmd.none)
+            ({ model | goals = model.goals ++ [Goal (createNewID (findMaxID model.goals)) name score False (stringToDate deadline)] }, Cmd.none)
         ToggleGoalComplete id status ->
             let
               newGoals =
@@ -106,7 +112,7 @@ update msg model =
         ChangeCurrentGoalScore score ->
             ({ model | currentGoalScore = score }, Cmd.none)
         ChangeCurrentDeadline dateString ->
-            ({ model | currentDeadline = dateString }, Cmd.none)
+            ({ model | currentDeadline = (stringToDate dateString) }, Cmd.none)
 
 --SUBSCRIPTIONS--
 subscriptions : Model -> Sub Msg
@@ -151,7 +157,7 @@ view model =
                                 input [ id "goalScoreInput", class "form-control", onInput ChangeCurrentGoalScore  ] [],
                                 label [ for "deadlineInput"] [ text "Deadline: " ],
                                 input [ id "deadlineInput", class "form-control", type_ "date", onInput ChangeCurrentDeadline ] [],
-                                button [class "btn btn-md btn primary", onWithOptions "click" (Options False True) (Json.succeed (AddGoal model.currentGoalName model.currentGoalScore model.currentDeadline)) ] [text "Submit"] 
+                                button [class "btn btn-md btn primary", onWithOptions "click" (Options False True) (Json.succeed (AddGoal model.currentGoalName model.currentGoalScore (dateToString model.currentDeadline))) ] [text "Submit"] 
                             ]
                     ],
                 div [class "col-lg-6 col-md-6"]
@@ -164,7 +170,7 @@ view model =
             [
                 div [ class "container" ]
                 [
-                    h1 [ class "center-text large-cursive-title" ] [ text model.currentDeadline ]
+                    h1 [ class "center-text large-cursive-title" ] [ text (dateToString model.currentDeadline) ]
                 ]
             ]
         ]
@@ -180,7 +186,7 @@ renderGoals goals =
                         label [] 
                         [ 
                             input [class "form-control", type_ "checkbox", onClick (ToggleScore goal) ] [],
-                            h1 [ class "text-center" ] [text goal.deadline],
+                            h1 [ class "text-center" ] [text (dateToString goal.deadline)], --do this!!!!!!!!!
                             text ((toString goal.name) ++ " - "), text goal.value 
                         ] 
                     ]) 
@@ -208,4 +214,14 @@ createNewID id =
     id + 1
 
 
-        
+
+
+
+stringToDate : String -> Date
+stringToDate dateString = 
+    Date.fromString dateString |> Result.withDefault (Date.fromTime 0)
+
+
+dateToString : Date -> String
+dateToString date =
+    DateFormat.format DateConfig.config "%d-%b-%Y" date
