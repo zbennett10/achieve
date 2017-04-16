@@ -6,7 +6,7 @@ import Html.Events exposing (..)
 import Html.Attributes exposing (..)
 import Json.Decode as Json
 import Date exposing (..)
-import DatePicker exposing (..)
+import DatePicker exposing (defaultSettings)
 import Date.Extra.Format as DateFormat exposing (format)
 import Date.Extra.Config.Config_en_us as DateConfig exposing (config)
 
@@ -38,20 +38,27 @@ type alias Model =
         goals : List Goal,
         currentGoalName : String,
         currentGoalScore : String,
-        currentDeadline : Date
+        currentDeadline : Date,
+        datePicker: DatePicker.DatePicker
     }
 
 --INIT
 initialGoalDeadline = Date.fromString "October 11, 1991" |> Result.withDefault (Date.fromTime 0)
 init : (Model, Cmd Msg)
 init = 
-    ({ 
-        score = 1000,
-        goals = [Goal 1 "Love Kalie Forever" "100" False initialGoalDeadline],
-        currentGoalName = "",
-        currentGoalScore = "",
-        currentDeadline =  Date.fromTime 0
-    }, Cmd.none)
+    let
+        (datePicker, datePickerFx ) =
+            DatePicker.init defaultSettings
+    in
+        { 
+            score = 1000,
+            goals = [Goal 1 "Love Kalie Forever" "100" False initialGoalDeadline],
+            currentGoalName = "",
+            currentGoalScore = "",
+            currentDeadline =  Date.fromTime 0,
+            datePicker = datePicker
+        }
+            ! [ Cmd.map ToDatePicker datePickerFx ]
 
 --ACTION TYPES--
 type Msg = NoOp
@@ -62,6 +69,7 @@ type Msg = NoOp
     | ChangeCurrentGoalName String
     | ChangeCurrentGoalScore String
     | ChangeCurrentDeadline String
+    | ToDatePicker DatePicker.Msg
 
 --UPDATE--
 
@@ -113,6 +121,20 @@ update msg model =
             ({ model | currentGoalScore = score }, Cmd.none)
         ChangeCurrentDeadline dateString ->
             ({ model | currentDeadline = (stringToDate dateString) }, Cmd.none)
+        ToDatePicker msg ->
+            let
+              ( newDatePicker, datePickerFx, mDate ) =
+                DatePicker.update msg model.datePicker
+
+              date =
+                case mDate of
+                    Nothing ->
+                        model.currentDeadline
+                    date ->
+                        model.currentDeadline
+            in
+                {model | currentDeadline = date, datePicker = newDatePicker} ! [Cmd.map ToDatePicker datePickerFx]
+              
 
 --SUBSCRIPTIONS--
 subscriptions : Model -> Sub Msg
@@ -170,7 +192,8 @@ view model =
             [
                 div [ class "container" ]
                 [
-                    h1 [ class "center-text large-cursive-title" ] [ text (dateToString model.currentDeadline) ]
+                    DatePicker.view model.datePicker
+                    |> Html.map ToDatePicker
                 ]
             ]
         ]
@@ -212,8 +235,6 @@ findMaxID records =
 createNewID : Int -> Int
 createNewID id = 
     id + 1
-
-
 
 
 
