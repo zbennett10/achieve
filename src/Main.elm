@@ -1,5 +1,5 @@
 --API
-port module Main exposing (..)
+-- port module Main exposing (..)
 
 import Html exposing (..)
 import Html.Events exposing (..)
@@ -123,17 +123,17 @@ update msg model =
             ({ model | currentDeadline = (stringToDate dateString) }, Cmd.none)
         ToDatePicker msg ->
             let
-              ( newDatePicker, datePickerFx, mDate ) =
+              ( newDatePicker, datePickerFx, maybeNewDate ) =
                 DatePicker.update msg model.datePicker
 
               date =
-                case mDate of
+                case maybeNewDate of
                     Nothing ->
-                        model.currentDeadline
-                    date ->
-                        model.currentDeadline
+                       model.currentDeadline
+                    Just date ->
+                       date
             in
-                {model | currentDeadline = date, datePicker = newDatePicker} ! [Cmd.map ToDatePicker datePickerFx]
+                { model | currentDeadline = date, datePicker = newDatePicker} ! [Cmd.map ToDatePicker datePickerFx]
               
 
 --SUBSCRIPTIONS--
@@ -177,8 +177,9 @@ view model =
                                 input [ id "goalNameInput", class "form-control", onInput ChangeCurrentGoalName ] [],
                                 label [ for "goalScoreInput" ] [ text "Goal Value: " ],
                                 input [ id "goalScoreInput", class "form-control", onInput ChangeCurrentGoalScore  ] [],
-                                label [ for "deadlineInput"] [ text "Deadline: " ],
-                                input [ id "deadlineInput", class "form-control", type_ "date", onInput ChangeCurrentDeadline ] [],
+                                label [ for "deadlineInput"] [ text "Select a goal deadline: " ],
+                                 DatePicker.view model.datePicker
+                                |> Html.map ToDatePicker,
                                 button [class "btn btn-md btn primary", onWithOptions "click" (Options False True) (Json.succeed (AddGoal model.currentGoalName model.currentGoalScore (dateToString model.currentDeadline))) ] [text "Submit"] 
                             ]
                     ],
@@ -188,13 +189,10 @@ view model =
                         renderGoals model.goals
                     ]
             ],
-            div [class "row" ]
+            div [ class "row" ]
             [
-                div [ class "container" ]
-                [
-                    DatePicker.view model.datePicker
-                    |> Html.map ToDatePicker
-                ]
+                
+                h1 [ class "text-center" ] [ text (dateToString model.currentDeadline) ]
             ]
         ]
 
