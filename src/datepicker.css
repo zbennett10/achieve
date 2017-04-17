@@ -1,6 +1,10 @@
 .elm-datepicker--container {
   position: relative; }
 
+.elm-datepicker--input {
+    width: 200px !important;
+}
+
 .elm-datepicker--input:focus {
   outline: 0; }
 

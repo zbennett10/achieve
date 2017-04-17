@@ -4,7 +4,8 @@
 import Html exposing (..)
 import Html.Events exposing (..)
 import Html.Attributes exposing (..)
-import Json.Decode as Json
+import Json.Decode as Decode
+import Json.Encode
 import Date exposing (..)
 import DatePicker exposing (defaultSettings)
 import Date.Extra.Format as DateFormat exposing (format)
@@ -180,7 +181,7 @@ view model =
                                 label [ for "deadlineInput"] [ text "Select a goal deadline: " ],
                                  DatePicker.view model.datePicker
                                 |> Html.map ToDatePicker,
-                                button [class "btn btn-md btn primary", onWithOptions "click" (Options False True) (Json.succeed (AddGoal model.currentGoalName model.currentGoalScore (dateToString model.currentDeadline))) ] [text "Submit"] 
+                                button [class "btn btn-md btn primary", onWithOptions "click" (Options False True) (Decode.succeed (AddGoal model.currentGoalName model.currentGoalScore (dateToString model.currentDeadline))) ] [text "Submit"] 
                             ]
                     ],
                 div [class "col-lg-6 col-md-6"]
@@ -244,3 +245,22 @@ stringToDate dateString =
 dateToString : Date -> String
 dateToString date =
     DateFormat.format DateConfig.config "%d-%b-%Y" date
+
+
+encodeGoals : Model -> Json.Encode.Value
+encodeGoals model =
+    Json.Encode.object
+        [
+            ("achieve_goals", Json.Encode.list (List.map encodeGoal model.goals))
+        ]
+
+encodeGoal : Goal -> Json.Encode.Value
+encodeGoal goal =
+    Json.Encode.object
+        [
+            ("id", Json.Encode.int goal.id),
+            ("name", Json.Encode.string goal.name),
+            ("value", Json.Encode.string goal.value),
+            ("completed", Json.Encode.bool goal.completed),
+            ("deadline", Json.Encode.string (dateToString goal.deadline))
+        ]
