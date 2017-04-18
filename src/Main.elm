@@ -1,5 +1,5 @@
 --API
--- port module Main exposing (..)
+port module Achieve exposing (..)
 
 import Html exposing (..)
 import Html.Events exposing (..)
@@ -10,6 +10,16 @@ import Date exposing (..)
 import DatePicker exposing (defaultSettings)
 import Date.Extra.Format as DateFormat exposing (format)
 import Date.Extra.Config.Config_en_us as DateConfig exposing (config)
+
+--Elm Bootstrap
+import Bootstrap.Grid as Grid
+import Bootstrap.Grid.Col as Col
+import Bootstrap.Button as Button
+import Bootstrap.Modal as Modal
+import Bootstrap.ListGroup as ListGroup
+import Bootstrap.Form as Form
+import Bootstrap.Form.Input as Input
+import Bootstrap.Form.Checkbox as Checkbox
 
 
 --MAIN--
@@ -154,64 +164,74 @@ type alias Options =
 
 view : Model -> Html Msg
 view model = 
-    div [ class "container" ]
+    Grid.container []
         [ 
             div [ class "jumbotron text-center" ] 
                 [ 
                     h1 [ class "large-cursive-title" ] [ text "Achieve." ]
                 ],
-            div [ class "row" ]
-                [
-                    
-                    h1 [ class "text-center" ] [ text "Overall Score" ],
-                    h2 [ class "text-center" ] [ text (toString model.score) ]  
-                
+            Grid.row []
+                [ Grid.col []
+                    [
+                        h1 [ class "text-center" ] [ text "Overall Score" ],
+                        h2 [ class "text-center" ] [ text (toString model.score) ]  
+                    ]
                 ],
-            div [ class "row" ]
+            Grid.row []
             [ 
-                div [ class "col-lg-6 col-md-6" ]
+                Grid.col []
                     [ 
                         h1 [ class "text-center" ] [ text "New Goal: " ],
-                        Html.form [ class "form-group" ]
-                            [ 
-                                label [ for "goalNameInput" ] [ text "Goal: " ],
-                                input [ id "goalNameInput", class "form-control", onInput ChangeCurrentGoalName ] [],
-                                label [ for "goalScoreInput" ] [ text "Goal Value: " ],
-                                input [ id "goalScoreInput", class "form-control", onInput ChangeCurrentGoalScore  ] [],
-                                label [ for "deadlineInput"] [ text "Select a goal deadline: " ],
-                                 DatePicker.view model.datePicker
-                                |> Html.map ToDatePicker,
-                                button [class "btn btn-md btn primary", onWithOptions "click" (Options False True) (Decode.succeed (AddGoal model.currentGoalName model.currentGoalScore (dateToString model.currentDeadline))) ] [text "Submit"] 
+                        Form.form []
+                            [ Form.group []
+                                [ 
+                                    Form.label [ for "goalNameInput" ] [ text "Goal: " ],
+                                    Input.text [ Input.attrs [id "goalNameInput", onInput ChangeCurrentGoalName ] ],
+                                    Form.label [ for "goalScoreInput" ] [ text "Goal Value: " ],
+                                    Input.text [ Input.attrs [ id "goalScoreInput", onInput ChangeCurrentGoalScore  ] ],
+                                    Form.label [ for "deadlineInput"] [ text "Select a goal deadline: " ],
+                                    DatePicker.view model.datePicker
+                                    |> Html.map ToDatePicker,
+                                    Button.button [Button.primary, Button.attrs [ onWithOptions "click" (Options False True) (Decode.succeed (AddGoal model.currentGoalName model.currentGoalScore (dateToString model.currentDeadline))) ] ] [text "Submit"] 
+                                ]
                             ]
                     ],
-                div [class "col-lg-6 col-md-6"]
+                Grid.col []
                     [
                         h1 [ class "text-center" ] [ text "Upcoming Goals" ],
                         renderGoals model.goals
                     ]
             ],
-            div [ class "row" ]
+            Grid.row []
             [
-                
-                h1 [ class "text-center" ] [ text (dateToString model.currentDeadline) ]
+                Grid.col []
+                [
+                    h1 [ class "text-center" ] [ text (dateToString model.currentDeadline) ]
+                ]
             ]
         ]
 
 
+--PORTS
+port localStorageSend : Json.Encode.Value -> Cmd msg
+
+
 renderGoals : List Goal -> Html Msg
 renderGoals goals =
-    ul [class "list-unstyled text-center"]
+    ListGroup.ul
         (List.map 
                 (\goal -> 
-                    li [ class "list-item" ] 
+                    ListGroup.li [ ListGroup.attrs [class "text-center"] ] 
                     [ 
-                        label [] 
-                        [ 
-                            input [class "form-control", type_ "checkbox", onClick (ToggleScore goal) ] [],
-                            h1 [ class "text-center" ] [text (dateToString goal.deadline)], --do this!!!!!!!!!
-                            text ((toString goal.name) ++ " - "), text goal.value 
-                        ] 
-                    ]) 
+                        Checkbox.checkbox [Checkbox.checked goal.completed, Checkbox.inline, Checkbox.success, Checkbox.attrs [class "list-checkbox", onClick (ToggleScore goal)] ] "",
+                        Form.label [] 
+                        [
+                                h2 [] [ text goal.name ],  
+                                h3 [] [ text goal.value ],
+                                h4 [] [ text (dateToString goal.deadline) ] --do this!!!!!!!!! 
+                        ]
+                    ]
+                ) 
         goals)
 
 
@@ -246,7 +266,7 @@ dateToString : Date -> String
 dateToString date =
     DateFormat.format DateConfig.config "%d-%b-%Y" date
 
-
+--encode list of goals for local storage
 encodeGoals : Model -> Json.Encode.Value
 encodeGoals model =
     Json.Encode.object
@@ -254,6 +274,7 @@ encodeGoals model =
             ("achieve_goals", Json.Encode.list (List.map encodeGoal model.goals))
         ]
 
+--encode an individual goal for local storage
 encodeGoal : Goal -> Json.Encode.Value
 encodeGoal goal =
     Json.Encode.object

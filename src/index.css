@@ -14,3 +14,10 @@ body {
     border-radius: 0 0 250px 250px !important;
     border: 5px solid white;
 }
+
+.list-checkbox {
+    margin-bottom: 40px;
+    margin-right: 20px;  
+    width: 37px;
+    height: 37px;
+}

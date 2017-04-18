@@ -2,12 +2,12 @@
 <html>
 	<head>
 		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 		<title>Achieve</title>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 		<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous"></script>
 		<script src="Main.js"></script>
-		<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-		<link href="https://fonts.googleapis.com/css?family=Lobster" rel="stylesheet">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">		<link href="https://fonts.googleapis.com/css?family=Lobster" rel="stylesheet">
 		<link href="./index.css" rel="stylesheet">
 		<link href="./datepicker.css" rel="stylesheet">
 	</head>
@@ -16,23 +16,6 @@
 
 	</body>
 	<script> 
-		var app = Elm.Main.fullscreen(); 
-		// $(function() {
-		// 	elmHost = document.getElementById("elmHost");
-		// 	var app = Elm.Component.embed(elmHost);
-
-		// 	$.datepicker.setDefaults({
-		// 		showOn: "focus",
-		// 		onSelect: sendDate,
-		// 	});
-
-		// 	app.ports.openDatepicker.subscribe(function() {
-		// 		$("date-input").datepicker().datepicker("show");
-		// 	});
-
-		// 	function sendDate (dateString) {
-		// 		app.ports.changeDateValue.send(dateString);
-		// 	}
-		// });
+		var app = Elm.Achieve.fullscreen(); 
 	</script>
 </html>
