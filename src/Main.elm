@@ -23,9 +23,9 @@ import Bootstrap.Form.Checkbox as Checkbox
 
 
 --MAIN--
-main : Program Never Model Msg
+main : Program (Maybe Model) Model Msg
 main =
-    program
+    programWithFlags
         { 
             init = init,
             view  = view,
@@ -55,21 +55,32 @@ type alias Model =
 
 --INIT
 initialGoalDeadline = Date.fromString "October 11, 1991" |> Result.withDefault (Date.fromTime 0)
-init : (Model, Cmd Msg)
-init = 
-    let
-        (datePicker, datePickerFx ) =
-            DatePicker.init defaultSettings
-    in
-        { 
-            score = 1000,
-            goals = [Goal 1 "Love Kalie Forever" "100" False initialGoalDeadline],
-            currentGoalName = "",
-            currentGoalScore = "",
-            currentDeadline =  Date.fromTime 0,
-            datePicker = datePicker
-        }
-            ! [ Cmd.map ToDatePicker datePickerFx ]
+initialModel = 
+        let
+            (datePicker, datePickerFx ) =
+                DatePicker.init defaultSettings
+        in
+            { 
+                score = 1000,
+                goals = [Goal 1 "Love Kalie Forever" "100" False initialGoalDeadline],
+                currentGoalName = "",
+                currentGoalScore = "",
+                currentDeadline =  Date.fromTime 0,
+                datePicker = datePicker
+            }
+                ! [ Cmd.map ToDatePicker datePickerFx ]
+
+--if nothing get type of intial model to match type annotation
+--add datepicker and default values to model (preferably somewhere else)
+--need to serialize datepicker values and deserialize upon init
+init : Maybe Model -> (Model, Cmd Msg)
+init model =
+    case model of
+        Just model ->
+            (model, Cmd.none)
+        Nothing ->
+            (initialModel, Cmd.none)
+        
 
 --ACTION TYPES--
 type Msg = NoOp
@@ -90,7 +101,7 @@ update msg model =
         NoOp ->
             (model, Cmd.none)
         AddGoal name score deadline ->
-            ({ model | goals = model.goals ++ [Goal (createNewID (findMaxID model.goals)) name score False (stringToDate deadline)] }, Cmd.none)
+            ({ model | goals = model.goals ++ [Goal (createNewID (findMaxID model.goals)) name score False (stringToDate deadline)] }, sendModelToStorage model)
         ToggleGoalComplete id status ->
             let
               newGoals =
@@ -103,7 +114,7 @@ update msg model =
                     )
                     model.goals
             in
-                ({ model | goals = newGoals }, Cmd.none)
+                ({ model | goals = newGoals }, sendModelToStorage model)
         UpdateGoalName id newName ->
             let
               newGoals =
@@ -116,7 +127,7 @@ update msg model =
                     )
                     model.goals
             in
-                ({ model | goals = newGoals }, Cmd.none)
+                ({ model | goals = newGoals }, sendModelToStorage model)
               
         ToggleScore goal -> 
             if goal.completed == False then
@@ -214,6 +225,7 @@ view model =
 
 --PORTS
 port localStorageSend : Json.Encode.Value -> Cmd msg
+port localStorageInput : Json.Encode.Value -> Cmd msg
 
 
 renderGoals : List Goal -> Html Msg
@@ -226,9 +238,9 @@ renderGoals goals =
                         Checkbox.checkbox [Checkbox.checked goal.completed, Checkbox.inline, Checkbox.success, Checkbox.attrs [class "list-checkbox", onClick (ToggleScore goal)] ] "",
                         Form.label [] 
                         [
-                                h2 [] [ text goal.name ],  
-                                h3 [] [ text goal.value ],
-                                h4 [] [ text (dateToString goal.deadline) ] --do this!!!!!!!!! 
+                                h3 [] [ text goal.name ],  
+                                h4 [] [ text goal.value ],
+                                h5 [] [ text (dateToString goal.deadline) ] --do this!!!!!!!!! 
                         ]
                     ]
                 ) 
@@ -266,12 +278,20 @@ dateToString : Date -> String
 dateToString date =
     DateFormat.format DateConfig.config "%d-%b-%Y" date
 
---encode list of goals for local storage
-encodeGoals : Model -> Json.Encode.Value
-encodeGoals model =
+
+sendModelToStorage : Model -> Cmd Msg
+sendModelToStorage model =
+    localStorageSend (encodeModel model)
+
+encodeModel : Model -> Json.Encode.Value
+encodeModel model =
     Json.Encode.object
         [
-            ("achieve_goals", Json.Encode.list (List.map encodeGoal model.goals))
+            ("score", Json.Encode.int model.score),
+            ("goals", Json.Encode.list (List.map encodeGoal model.goals)),
+            ("currentGoalName", Json.Encode.string model.currentGoalName),
+            ("currentGoalScore", Json.Encode.string model.currentGoalScore),
+            ("currentGoalDeadline", Json.Encode.string (dateToString model.currentDeadline)) 
         ]
 
 --encode an individual goal for local storage
@@ -285,3 +305,5 @@ encodeGoal goal =
             ("completed", Json.Encode.bool goal.completed),
             ("deadline", Json.Encode.string (dateToString goal.deadline))
         ]
+
+--write function that serializes values from datepicker

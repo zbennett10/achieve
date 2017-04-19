@@ -2,6 +2,14 @@ body {
     background: #E7F3FF;
 }
 
+h1 {
+    color: coral;
+}
+
+h2, h3, h4, h5, h6 {
+    color: #1F5846;
+}
+
 .large-cursive-title {
     font-family: 'Lobster', cursive !important;
     font-size: 110px !important;

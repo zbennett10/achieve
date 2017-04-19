@@ -1,4 +1,5 @@
 .elm-datepicker--container {
+  
   position: relative; }
 
 .elm-datepicker--input {
@@ -15,7 +16,8 @@
 
 .elm-datepicker--picker-header,
 .elm-datepicker--weekdays {
-  background: #F2F2F2; }
+  color: white;
+  background: #1F5846; }
 
 .elm-datepicker--picker-header {
   display: flex;
@@ -78,7 +80,8 @@
 .elm-datepicker--day {
   cursor: pointer; }
   .elm-datepicker--day:hover {
-    background: #F2F2F2; }
+    color: white;
+    background: #1F5846; }
 
 .elm-datepicker--disabled {
   cursor: default;
@@ -88,9 +91,9 @@
 
 .elm-datepicker--picked {
   color: white;
-  background: darkblue; }
+  background: coral; }
   .elm-datepicker--picked:hover {
-    background: darkblue; }
+    background: coral; }
 
 .elm-datepicker--today {
   font-weight: bold; }
