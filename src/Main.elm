@@ -7,7 +7,6 @@ import Html.Attributes exposing (..)
 import Json.Decode as Decode
 import Json.Encode
 import Date exposing (..)
-import DatePicker exposing (defaultSettings)
 import Date.Extra.Format as DateFormat exposing (format)
 import Date.Extra.Config.Config_en_us as DateConfig exposing (config)
 
@@ -20,6 +19,8 @@ import Bootstrap.ListGroup as ListGroup
 import Bootstrap.Form as Form
 import Bootstrap.Form.Input as Input
 import Bootstrap.Form.Checkbox as Checkbox
+
+--expecting null when program reads from localStorage - set program to be aware of flags?
 
 
 --MAIN--
@@ -40,7 +41,7 @@ type alias Goal =
         name : String,
         value : String, 
         completed : Bool,
-        deadline : Date
+        deadline : String
     }
 
 type alias Model =
@@ -49,30 +50,13 @@ type alias Model =
         goals : List Goal,
         currentGoalName : String,
         currentGoalScore : String,
-        currentDeadline : Date,
-        datePicker: DatePicker.DatePicker
+        currentDeadline : String
     }
 
 --INIT
-initialGoalDeadline = Date.fromString "October 11, 1991" |> Result.withDefault (Date.fromTime 0)
-initialModel = 
-        let
-            (datePicker, datePickerFx ) =
-                DatePicker.init defaultSettings
-        in
-            { 
-                score = 1000,
-                goals = [Goal 1 "Love Kalie Forever" "100" False initialGoalDeadline],
-                currentGoalName = "",
-                currentGoalScore = "",
-                currentDeadline =  Date.fromTime 0,
-                datePicker = datePicker
-            }
-                ! [ Cmd.map ToDatePicker datePickerFx ]
-
---if nothing get type of intial model to match type annotation
---add datepicker and default values to model (preferably somewhere else)
---need to serialize datepicker values and deserialize upon init
+initialModel = Model 1000 [Goal 1 "Love Kalie Forever" "100" False "October 11, 1991"] "" "" "October 11, 1991"
+      
+          
 init : Maybe Model -> (Model, Cmd Msg)
 init model =
     case model of
@@ -91,7 +75,7 @@ type Msg = NoOp
     | ChangeCurrentGoalName String
     | ChangeCurrentGoalScore String
     | ChangeCurrentDeadline String
-    | ToDatePicker DatePicker.Msg
+    | SetModel Model
 
 --UPDATE--
 
@@ -101,7 +85,7 @@ update msg model =
         NoOp ->
             (model, Cmd.none)
         AddGoal name score deadline ->
-            ({ model | goals = model.goals ++ [Goal (createNewID (findMaxID model.goals)) name score False (stringToDate deadline)] }, sendModelToStorage model)
+            ({ model | goals = model.goals ++ [Goal (createNewID (findMaxID model.goals)) name score False deadline] }, sendModelToStorage model)
         ToggleGoalComplete id status ->
             let
               newGoals =
@@ -142,20 +126,10 @@ update msg model =
         ChangeCurrentGoalScore score ->
             ({ model | currentGoalScore = score }, Cmd.none)
         ChangeCurrentDeadline dateString ->
-            ({ model | currentDeadline = (stringToDate dateString) }, Cmd.none)
-        ToDatePicker msg ->
-            let
-              ( newDatePicker, datePickerFx, maybeNewDate ) =
-                DatePicker.update msg model.datePicker
-
-              date =
-                case maybeNewDate of
-                    Nothing ->
-                       model.currentDeadline
-                    Just date ->
-                       date
-            in
-                { model | currentDeadline = date, datePicker = newDatePicker} ! [Cmd.map ToDatePicker datePickerFx]
+            ({ model | currentDeadline = dateString }, Cmd.none)
+        
+        SetModel newModel ->
+            ( newModel, Cmd.none )
               
 
 --SUBSCRIPTIONS--
@@ -201,9 +175,8 @@ view model =
                                     Form.label [ for "goalScoreInput" ] [ text "Goal Value: " ],
                                     Input.text [ Input.attrs [ id "goalScoreInput", onInput ChangeCurrentGoalScore  ] ],
                                     Form.label [ for "deadlineInput"] [ text "Select a goal deadline: " ],
-                                    DatePicker.view model.datePicker
-                                    |> Html.map ToDatePicker,
-                                    Button.button [Button.primary, Button.attrs [ onWithOptions "click" (Options False True) (Decode.succeed (AddGoal model.currentGoalName model.currentGoalScore (dateToString model.currentDeadline))) ] ] [text "Submit"] 
+                                    Input.date [ Input.attrs [id "deadlineInput", onInput ChangeCurrentDeadline ]],
+                                    Button.button [Button.primary, Button.attrs [ onWithOptions "click" (Options False True) (Decode.succeed (AddGoal model.currentGoalName model.currentGoalScore model.currentDeadline)) ] ] [text "Submit"] 
                                 ]
                             ]
                     ],
@@ -217,7 +190,7 @@ view model =
             [
                 Grid.col []
                 [
-                    h1 [ class "text-center" ] [ text (dateToString model.currentDeadline) ]
+                    h1 [ class "text-center" ] [ text model.currentDeadline ]
                 ]
             ]
         ]
@@ -240,7 +213,7 @@ renderGoals goals =
                         [
                                 h3 [] [ text goal.name ],  
                                 h4 [] [ text goal.value ],
-                                h5 [] [ text (dateToString goal.deadline) ] --do this!!!!!!!!! 
+                                h5 [] [ text goal.deadline ] --do this!!!!!!!!! 
                         ]
                     ]
                 ) 
@@ -291,7 +264,7 @@ encodeModel model =
             ("goals", Json.Encode.list (List.map encodeGoal model.goals)),
             ("currentGoalName", Json.Encode.string model.currentGoalName),
             ("currentGoalScore", Json.Encode.string model.currentGoalScore),
-            ("currentGoalDeadline", Json.Encode.string (dateToString model.currentDeadline)) 
+            ("currentDeadline", Json.Encode.string model.currentDeadline) 
         ]
 
 --encode an individual goal for local storage
@@ -303,7 +276,40 @@ encodeGoal goal =
             ("name", Json.Encode.string goal.name),
             ("value", Json.Encode.string goal.value),
             ("completed", Json.Encode.bool goal.completed),
-            ("deadline", Json.Encode.string (dateToString goal.deadline))
+            ("deadline", Json.Encode.string goal.deadline)
         ]
 
---write function that serializes values from datepicker
+decodeModel : Decode.Value -> Result String Model
+decodeModel modelJson = 
+    Decode.decodeValue modelDecoder modelJson
+
+modelDecoder : Decode.Decoder Model
+modelDecoder =
+    Decode.map5 Model
+        (Decode.field "score" Decode.int)
+        (Decode.field "goals" (Decode.list goalDecoder))
+        (Decode.field "currentGoalName" Decode.string)
+        (Decode.field "currentGoalScore" Decode.string)
+        (Decode.field "currentDeadline" Decode.string)
+
+goalDecoder : Decode.Decoder Goal
+goalDecoder =
+    Decode.map5 Goal
+        (Decode.field "id" Decode.int)
+        (Decode.field "name" Decode.string)
+        (Decode.field "value" Decode.string)
+        (Decode.field "completed" Decode.bool)
+        (Decode.field "deadline" Decode.string)
+
+mapLocalStorageInput : Decode.Value -> Msg
+mapLocalStorageInput modelJson =
+    case (decodeModel modelJson) of
+        Ok model ->
+            SetModel model
+        
+        Err message ->
+            let
+                _ =
+                    Debug.log message
+            in
+                NoOp
