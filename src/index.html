@@ -16,11 +16,13 @@
 
 	</body>
 	<script> 
-		const initialState = localStorage.getItem('achieve_state');
-		const app = Elm.Achieve.fullscreen(initialState); 
+		var storedState = localStorage.getItem('achieve_state');
+		var initialState = storedState ? JSON.parse(storedState) : null;
+		var app = Elm.Achieve.fullscreen(initialState); 
 		app.ports.localStorageSend.subscribe(function(state) {
 			localStorage.setItem('achieve_state', JSON.stringify(state));
 		});
+		
 
 		
 	</script>
