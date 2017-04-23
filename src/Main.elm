@@ -9,6 +9,7 @@ import Json.Encode
 import Date exposing (..)
 import Date.Extra.Format as DateFormat exposing (format)
 import Date.Extra.Config.Config_en_us as DateConfig exposing (config)
+import Time exposing (..)
 import List.Extra exposing (..)
 
 --Elm Bootstrap
@@ -22,7 +23,8 @@ import Bootstrap.Form.Input as Input
 import Bootstrap.Form.Checkbox as Checkbox
 
 --sort goals by date
---add ability to edit goals (use modal to edit)
+--add modal
+--hook edit update function to modal form
 --add place on app that contains completed goals
 --
 
@@ -87,6 +89,7 @@ type Msg = NoOp
     | ChangeCurrentDeadline String
     | SetModel Model
     | DeleteGoal Int
+    | EditGoal Int
 
 --UPDATE--
 
@@ -148,13 +151,23 @@ update msg model =
                     findGoalByID model.goals id
 
                 goalIndex =
-                    case findIndex (\goal -> goal.id == id) model.goals of
-                        Nothing ->
-                            -1 --take advantage of the fact that there is no negative indices in elm
-                        Just goalIndex ->
-                            goalIndex
+                    findGoalIndex model.goals id
             in
                 ({model | goals = removeAt goalIndex model.goals }, Cmd.none)
+
+        EditGoal id ->
+            let
+                goal =
+                    findGoalByID model.goals id
+
+                goalIndex =
+                    findGoalIndex model.goals id
+
+                newGoals =
+                    updateGoalAtIndex model.goals goalIndex goal
+    
+            in
+                ({model | goals = newGoals }, Cmd.none)
               
 
 --SUBSCRIPTIONS--
@@ -234,6 +247,7 @@ renderGoals goals =
                                 h4 [] [ text goal.value ],
                                 h5 [] [ text goal.deadline ], --do this!!!!!!!!!
                                 Button.button [Button.danger, Button.attrs [onClick (DeleteGoal goal.id)] ] [text "Remove"]
+                                --button that opens model here
                         ]
                     ]
                 ) 
@@ -241,6 +255,24 @@ renderGoals goals =
 
 
 --HELPERS--
+
+
+findGoalIndex : List Goal -> Int -> Int
+findGoalIndex goals id =
+    case findIndex (\goal -> goal.id == id) goals of
+        Nothing ->
+            -1
+        Just index ->
+            index
+
+updateGoalAtIndex : List Goal -> Int -> Goal -> List Goal
+updateGoalAtIndex goals index newGoal =
+    case updateAt index (\goal -> newGoal) goals of
+        Nothing ->
+            goals
+        Just newGoals ->
+            newGoals
+
 
 updateGoalComplete : Goal -> Bool -> Goal
 updateGoalComplete goal value =
@@ -260,9 +292,14 @@ createNewID : Int -> Int
 createNewID id = 
     id + 1
 
-findGoalByID : List Goal -> Int -> Maybe Goal
+findGoalByID : List Goal -> Int -> Goal
 findGoalByID goals id =
-    find (\goal -> goal.id == id) goals
+    case find (\goal -> goal.id == id) goals of
+        Nothing ->
+            Goal (createNewID (findMaxID goals)) "Example Goal" "10" False (toString Time.now)
+        Just goal ->
+            goal
+      
 
 
 stringToDate : String -> Date
