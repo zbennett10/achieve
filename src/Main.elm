@@ -9,6 +9,7 @@ import Json.Encode
 import Date exposing (..)
 import Date.Extra.Format as DateFormat exposing (format)
 import Date.Extra.Config.Config_en_us as DateConfig exposing (config)
+import List.Extra exposing (..)
 
 --Elm Bootstrap
 import Bootstrap.Grid as Grid
@@ -20,8 +21,10 @@ import Bootstrap.Form as Form
 import Bootstrap.Form.Input as Input
 import Bootstrap.Form.Checkbox as Checkbox
 
---expecting null when program reads from localStorage - set program to be aware of flags?
-
+--sort goals by date
+--add ability to edit goals (use modal to edit)
+--add place on app that contains completed goals
+--
 
 
 --MAIN--
@@ -43,6 +46,12 @@ type alias Goal =
         value : String, 
         completed : Bool,
         deadline : String
+    }
+
+type alias Options =
+    {
+        stopPropagation : Bool,
+        preventDefault : Bool
     }
 
 type alias Model =
@@ -77,6 +86,7 @@ type Msg = NoOp
     | ChangeCurrentGoalScore String
     | ChangeCurrentDeadline String
     | SetModel Model
+    | DeleteGoal Int
 
 --UPDATE--
 
@@ -131,6 +141,20 @@ update msg model =
         
         SetModel newModel ->
             ( newModel, Cmd.none )
+
+        DeleteGoal id -> 
+            let
+                goal =
+                    findGoalByID model.goals id
+
+                goalIndex =
+                    case findIndex (\goal -> goal.id == id) model.goals of
+                        Nothing ->
+                            -1 --take advantage of the fact that there is no negative indices in elm
+                        Just goalIndex ->
+                            goalIndex
+            in
+                ({model | goals = removeAt goalIndex model.goals }, Cmd.none)
               
 
 --SUBSCRIPTIONS--
@@ -141,12 +165,6 @@ subscriptions model =
 
 
 --VIEW--
-
-type alias Options =
-    {
-        stopPropagation : Bool,
-        preventDefault : Bool
-    }
 
 view : Model -> Html Msg
 view model = 
@@ -214,7 +232,8 @@ renderGoals goals =
                         [
                                 h3 [] [ text goal.name ],  
                                 h4 [] [ text goal.value ],
-                                h5 [] [ text goal.deadline ] --do this!!!!!!!!! 
+                                h5 [] [ text goal.deadline ], --do this!!!!!!!!!
+                                Button.button [Button.danger, Button.attrs [onClick (DeleteGoal goal.id)] ] [text "Remove"]
                         ]
                     ]
                 ) 
@@ -241,6 +260,9 @@ createNewID : Int -> Int
 createNewID id = 
     id + 1
 
+findGoalByID : List Goal -> Int -> Maybe Goal
+findGoalByID goals id =
+    find (\goal -> goal.id == id) goals
 
 
 stringToDate : String -> Date
