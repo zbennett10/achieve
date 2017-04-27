@@ -5,12 +5,14 @@ import Html exposing (..)
 import Html.Events exposing (..)
 import Html.Attributes exposing (..)
 import Json.Decode as Decode
+import Json.Decode.Extra exposing (fromResult)
 import Json.Encode
 import Date exposing (..)
 import Date.Extra.Format as DateFormat exposing (format)
 import Date.Extra.Config.Config_en_us as DateConfig exposing (config)
 import Time exposing (..)
 import List.Extra exposing (..)
+import Json.Helpers exposing (..)
 
 --Elm Bootstrap
 import Bootstrap.Grid as Grid
@@ -21,16 +23,20 @@ import Bootstrap.ListGroup as ListGroup
 import Bootstrap.Form as Form
 import Bootstrap.Form.Input as Input
 import Bootstrap.Form.Checkbox as Checkbox
+import Bootstrap.Modal as Modal
+
 
 --sort goals by date
---add modal
+--add function that opens moddal
 --hook edit update function to modal form
 --add place on app that contains completed goals
---
+
+
+
 
 
 --MAIN--
-main : Program (Maybe Model) Model Msg
+main : Program Decode.Value Model Msg
 main =
     programWithFlags
         { 
@@ -62,20 +68,18 @@ type alias Model =
         goals : List Goal,
         currentGoalName : String,
         currentGoalScore : String,
-        currentDeadline : String
+        currentDeadline : String,
+        modalState: Modal.State
     }
 
 --INIT
-initialModel = Model 1000 [Goal 1 "Love Kalie Forever" "100" False "October 11, 1991"] "" "" "October 11, 1991"
+initialModel : Model
+initialModel = Model 1000 [Goal 1 "Love Kalie Forever" "100" False "October 11, 1991"] "" "" "October 11, 1991" Modal.hiddenState
       
           
-init : Maybe Model -> (Model, Cmd Msg)
-init model =
-    case model of
-        Just model ->
-            (model, Cmd.none)
-        Nothing ->
-            (initialModel, Cmd.none)
+init : Decode.Value -> (Model, Cmd Msg)
+init modelJson =
+        mapLocalStorageInput modelJson
         
 
 --ACTION TYPES--
@@ -90,6 +94,7 @@ type Msg = NoOp
     | SetModel Model
     | DeleteGoal Int
     | EditGoal Int
+    | EditModalMsg Modal.State
 
 --UPDATE--
 
@@ -168,6 +173,11 @@ update msg model =
     
             in
                 ({model | goals = newGoals }, Cmd.none)
+
+        EditModalMsg state->
+            ( { model | modalState = state}, Cmd.none )
+
+        
               
 
 --SUBSCRIPTIONS--
@@ -224,7 +234,19 @@ view model =
                 [
                     h1 [ class "text-center" ] [ text model.currentDeadline ]
                 ]
-            ]
+            ],
+            Modal.config EditModalMsg
+            |> Modal.small
+            |> Modal.h3 [] [ text "Edit Goal" ]
+            |> Modal.body [] [ p [] [ text "Goal stuff will go here"] ]
+            |> Modal.footer []
+                [ Button.button
+                    [ Button.outlinePrimary
+                    , Button.attrs [ onClick (EditModalMsg Modal.hiddenState)]
+                    ]
+                    [ text "Close" ]
+                ]
+            |> Modal.view model.modalState
         ]
 
 
@@ -246,7 +268,8 @@ renderGoals goals =
                                 h3 [] [ text goal.name ],  
                                 h4 [] [ text goal.value ],
                                 h5 [] [ text goal.deadline ], --do this!!!!!!!!!
-                                Button.button [Button.danger, Button.attrs [onClick (DeleteGoal goal.id)] ] [text "Remove"]
+                                Button.button [Button.danger, Button.attrs [onClick (DeleteGoal goal.id)] ] [ text "Remove" ],
+                                Button.button [Button.success, Button.attrs [ onClick (EditModalMsg Modal.visibleState) ] ] [ text "Edit" ]
                                 --button that opens model here
                         ]
                     ]
@@ -301,7 +324,6 @@ findGoalByID goals id =
             goal
       
 
-
 stringToDate : String -> Date
 stringToDate dateString = 
     Date.fromString dateString |> Result.withDefault (Date.fromTime 0)
@@ -316,6 +338,8 @@ sendModelToStorage : Model -> Cmd Msg
 sendModelToStorage model =
     localStorageSend (encodeModel model)
 
+
+
 encodeModel : Model -> Json.Encode.Value
 encodeModel model =
     Json.Encode.object
@@ -324,7 +348,8 @@ encodeModel model =
             ("goals", Json.Encode.list (List.map encodeGoal model.goals)),
             ("currentGoalName", Json.Encode.string model.currentGoalName),
             ("currentGoalScore", Json.Encode.string model.currentGoalScore),
-            ("currentDeadline", Json.Encode.string model.currentDeadline) 
+            ("currentDeadline", Json.Encode.string model.currentDeadline),
+            ("modalState", encodeEditModalState model.modalState)
         ]
 
 --encode an individual goal for local storage
@@ -339,18 +364,37 @@ encodeGoal goal =
             ("deadline", Json.Encode.string goal.deadline)
         ]
 
+
 decodeModel : Decode.Value -> Result String Model
 decodeModel modelJson = 
     Decode.decodeValue modelDecoder modelJson
 
+
+encodeEditModalState : Modal.State -> Json.Encode.Value
+encodeEditModalState state =
+    case state of
+        visibleState -> 
+            Json.Encode.bool True
+
+
+decodeEditModalState : Bool -> Decode.Decoder Modal.State
+decodeEditModalState bool =
+    case bool of
+        True ->
+            Decode.succeed Modal.visibleState
+        False ->
+            Decode.succeed Modal.hiddenState
+
+
 modelDecoder : Decode.Decoder Model
 modelDecoder =
-    Decode.map5 Model
-        (Decode.field "score" Decode.int)
-        (Decode.field "goals" (Decode.list goalDecoder))
-        (Decode.field "currentGoalName" Decode.string)
-        (Decode.field "currentGoalScore" Decode.string)
-        (Decode.field "currentDeadline" Decode.string)
+    Decode.map6 Model
+        ("score" := Decode.int)
+        ("goals" := (Decode.list goalDecoder))
+        ("currentGoalName" := Decode.string)
+        ("currentGoalScore" := Decode.string)
+        ("currentDeadline" := Decode.string)
+        ("modalState" := Decode.bool |> Decode.andThen decodeEditModalState)
 
 goalDecoder : Decode.Decoder Goal
 goalDecoder =
@@ -361,15 +405,11 @@ goalDecoder =
         (Decode.field "completed" Decode.bool)
         (Decode.field "deadline" Decode.string)
 
-mapLocalStorageInput : Decode.Value -> Msg
+mapLocalStorageInput : Decode.Value -> (Model, Cmd Msg)
 mapLocalStorageInput modelJson =
     case (decodeModel modelJson) of
         Ok model ->
-            SetModel model
+            (model, Cmd.none)
         
         Err message ->
-            let
-                _ =
-                    Debug.log message
-            in
-                NoOp
+            (initialModel,  Cmd.none)
