@@ -27,7 +27,6 @@ import Bootstrap.Modal as Modal
 
 
 --sort goals by date
---add function that opens moddal
 --hook edit update function to modal form
 --add place on app that contains completed goals
 
@@ -69,12 +68,16 @@ type alias Model =
         currentGoalName : String,
         currentGoalScore : String,
         currentDeadline : String,
-        modalState: Modal.State
+        modalState: Modal.State,
+        currentEditGoal : Goal
     }
 
 --INIT
+emptyGoal : Goal
+emptyGoal = Goal 0 "" "" False ""
+
 initialModel : Model
-initialModel = Model 1000 [Goal 1 "Love Kalie Forever" "100" False "October 11, 1991"] "" "" "October 11, 1991" Modal.hiddenState
+initialModel = Model 1000 [Goal 1 "Love Kalie Forever" "100" False "October 11, 1991"] "" "" "October 11, 1991" Modal.hiddenState emptyGoal
       
           
 init : Decode.Value -> (Model, Cmd Msg)
@@ -95,6 +98,8 @@ type Msg = NoOp
     | DeleteGoal Int
     | EditGoal Int
     | EditModalMsg Modal.State
+    | PopulateEditModal Goal
+    | SetCurrentEditGoal Goal
 
 --UPDATE--
 
@@ -163,7 +168,7 @@ update msg model =
         EditGoal id ->
             let
                 goal =
-                    findGoalByID model.goals id
+                    Goal id model.currentGoalName model.currentGoalScore False model.currentDeadline
 
                 goalIndex =
                     findGoalIndex model.goals id
@@ -172,10 +177,19 @@ update msg model =
                     updateGoalAtIndex model.goals goalIndex goal
     
             in
-                ({model | goals = newGoals }, Cmd.none)
+                {model | goals = newGoals }
+                |> update (EditModalMsg Modal.hiddenState)
 
         EditModalMsg state->
-            ( { model | modalState = state}, Cmd.none )
+            ( { model | modalState = state }, Cmd.none )
+
+        PopulateEditModal goal ->
+            ( { model | currentEditGoal = goal }, Cmd.none )
+
+        SetCurrentEditGoal goal ->
+            { model | currentEditGoal = findGoalByID model.goals goal.id }
+            |> update (EditModalMsg Modal.visibleState)
+
 
         
               
@@ -205,7 +219,7 @@ view model =
                     ]
                 ],
             Grid.row []
-            [ 
+            [                                                                           
                 Grid.col []
                     [ 
                         h1 [ class "text-center" ] [ text "New Goal: " ],
@@ -237,8 +251,25 @@ view model =
             ],
             Modal.config EditModalMsg
             |> Modal.small
-            |> Modal.h3 [] [ text "Edit Goal" ]
-            |> Modal.body [] [ p [] [ text "Goal stuff will go here"] ]
+            |> Modal.h1 [] [ text "Edit Goal" ]
+            |> Modal.body [] 
+                [ 
+                  h2 [] [ text model.currentEditGoal.name],
+                  Form.form []
+                            [ Form.group []
+                                [ 
+                                    Form.label [ for "goalNameInput" ] [ text "Name: " ],
+                                    Input.text [ Input.attrs [id "goalNameInput", onInput ChangeCurrentGoalName ] ],
+                                    Form.label [ for "goalScoreInput" ] [ text "Goal Value: " ],
+                                    Input.text [ Input.attrs [ id "goalScoreInput", onInput ChangeCurrentGoalScore  ] ],
+                                    Form.label [ for "deadlineInput"] [ text "Select a goal deadline: " ],
+                                    Input.date [ Input.attrs [id "deadlineInput", onInput ChangeCurrentDeadline ]],
+                                    Button.button [Button.primary, Button.attrs [ onWithOptions "click" (Options False True) (Decode.succeed (EditGoal model.currentEditGoal.id)) ] ] [text "Submit"] 
+                                ]
+                            ]
+
+                
+                ]
             |> Modal.footer []
                 [ Button.button
                     [ Button.outlinePrimary
@@ -269,7 +300,7 @@ renderGoals goals =
                                 h4 [] [ text goal.value ],
                                 h5 [] [ text goal.deadline ], --do this!!!!!!!!!
                                 Button.button [Button.danger, Button.attrs [onClick (DeleteGoal goal.id)] ] [ text "Remove" ],
-                                Button.button [Button.success, Button.attrs [ onClick (EditModalMsg Modal.visibleState) ] ] [ text "Edit" ]
+                                Button.button [Button.success, Button.attrs [ id (toString goal.id), onClick (SetCurrentEditGoal goal) ] ] [ text "Edit" ]
                                 --button that opens model here
                         ]
                     ]
@@ -349,7 +380,8 @@ encodeModel model =
             ("currentGoalName", Json.Encode.string model.currentGoalName),
             ("currentGoalScore", Json.Encode.string model.currentGoalScore),
             ("currentDeadline", Json.Encode.string model.currentDeadline),
-            ("modalState", encodeEditModalState model.modalState)
+            ("modalState", encodeEditModalState model.modalState),
+            ("currentEditGoal", encodeGoal model.currentEditGoal)
         ]
 
 --encode an individual goal for local storage
@@ -388,13 +420,14 @@ decodeEditModalState bool =
 
 modelDecoder : Decode.Decoder Model
 modelDecoder =
-    Decode.map6 Model
+    Decode.map7 Model
         ("score" := Decode.int)
         ("goals" := (Decode.list goalDecoder))
         ("currentGoalName" := Decode.string)
         ("currentGoalScore" := Decode.string)
         ("currentDeadline" := Decode.string)
         ("modalState" := Decode.bool |> Decode.andThen decodeEditModalState)
+        ("currentEditGoal" := goalDecoder)
 
 goalDecoder : Decode.Decoder Goal
 goalDecoder =
