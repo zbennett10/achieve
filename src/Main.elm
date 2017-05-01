@@ -27,7 +27,6 @@ import Bootstrap.Modal as Modal
 
 
 --sort goals by date
---hook edit update function to modal form
 --add place on app that contains completed goals
 
 
@@ -181,10 +180,10 @@ update msg model =
                 |> update (EditModalMsg Modal.hiddenState)
 
         EditModalMsg state->
-            ( { model | modalState = state }, Cmd.none )
+            ( { model | modalState = state }, sendModelToStorage model )
 
         PopulateEditModal goal ->
-            ( { model | currentEditGoal = goal }, Cmd.none )
+            ( { model | currentEditGoal = goal }, sendModelToStorage model )
 
         SetCurrentEditGoal goal ->
             { model | currentEditGoal = findGoalByID model.goals goal.id }
@@ -413,7 +412,7 @@ decodeEditModalState : Bool -> Decode.Decoder Modal.State
 decodeEditModalState bool =
     case bool of
         True ->
-            Decode.succeed Modal.visibleState
+            Decode.succeed Modal.hiddenState
         False ->
             Decode.succeed Modal.hiddenState
 
