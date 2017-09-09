@@ -16,6 +16,8 @@ import Json.Helpers exposing (..)
 
 --Elm Bootstrap
 import Bootstrap.Grid as Grid
+import Bootstrap.Grid.Row as Row
+import Bootstrap.Grid.Col as Col
 import Bootstrap.Button as Button
 import Bootstrap.Modal as Modal
 import Bootstrap.ListGroup as ListGroup
@@ -220,74 +222,72 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model = 
-    Grid.container []
-        [ 
-            div [ class "jumbotron text-center" ] 
-                [ 
-                    h1 [ class "large-cursive-title" ] [ text "Achieve." ]
-                ],
-            Grid.row []
-                [ Grid.col []
-                    [
-                        div [ class "text-center scoreboard" ] 
+    div [ id "AchieveApp" ]
+        [ div [ class "new-goal-flyout" ]
+            [ h1 [ class "text-center" ] [ text "Create Goal" ],
+                Form.form [ class "new-goal-form" ]
+                    [ Form.group []
                         [ 
-                            h2 [ class "score"] [ text (toString model.score)  ]
-                        ]  
+                            Form.label [ for "goalNameInput" ] [ text "Name" ],
+                            Input.text [ Input.attrs [id "goalNameInput", onInput ChangeCurrentGoalName ] ],
+                            Form.label [ for "goalScoreInput" ] [ text "Value" ],
+                            Input.text [ Input.attrs [ id "goalScoreInput", onInput ChangeCurrentGoalScore  ] ],
+                            Form.label [ for "deadlineInput"] [ text "Deadline" ],
+                            Input.date [ Input.attrs [id "deadlineInput", onInput ChangeCurrentDeadline ]],
+                            Button.button [Button.primary, Button.attrs [ onWithOptions "click" (Options False True) (Decode.succeed (AddGoal model.currentGoalName model.currentGoalScore model.currentDeadline)) ] ] [text "Submit"] 
+                        ]
                     ]
-                ],
-            Grid.row []
-            [                                                                           
-                Grid.col []
-                    [ 
-                        h1 [ class "text-center" ] [ text "New Goal: " ],
-                        Form.form []
-                            [ Form.group []
-                                [ 
-                                    Form.label [ for "goalNameInput" ] [ text "Goal: " ],
-                                    Input.text [ Input.attrs [id "goalNameInput", onInput ChangeCurrentGoalName ] ],
-                                    Form.label [ for "goalScoreInput" ] [ text "Goal Value: " ],
-                                    Input.text [ Input.attrs [ id "goalScoreInput", onInput ChangeCurrentGoalScore  ] ],
-                                    Form.label [ for "deadlineInput"] [ text "Select a goal deadline: " ],
-                                    Input.date [ Input.attrs [id "deadlineInput", onInput ChangeCurrentDeadline ]],
-                                    Button.button [Button.primary, Button.attrs [ onWithOptions "click" (Options False True) (Decode.succeed (AddGoal model.currentGoalName model.currentGoalScore model.currentDeadline)) ] ] [text "Submit"] 
-                                ]
-                            ]
-                    ],
-                Grid.col []
-                    [
-                        h1 [ class "text-center" ] [ text "Goals" ],
-                        renderGoals model.goals
-                    ]
-            ],
-            Modal.config EditModalMsg
-            |> Modal.small
-            |> Modal.h1 [] [ text "Edit Goal" ]
-            |> Modal.body [] 
-                [ 
-                  h2 [] [ text model.currentEditGoal.name],
-                  Form.form []
-                            [ Form.group []
-                                [ 
-                                    Form.label [ for "goalNameInput" ] [ text "Name: " ],
-                                    Input.text [ Input.attrs [id "goalNameInput", onInput ChangeCurrentGoalName ] ],
-                                    Form.label [ for "goalScoreInput" ] [ text "Goal Value: " ],
-                                    Input.text [ Input.attrs [ id "goalScoreInput", onInput ChangeCurrentGoalScore  ] ],
-                                    Form.label [ for "deadlineInput"] [ text "Select a goal deadline: " ],
-                                    Input.date [ Input.attrs [id "deadlineInput", onInput ChangeCurrentDeadline ]],
-                                    Button.button [Button.primary, Button.attrs [ onWithOptions "click" (Options False True) (Decode.succeed (EditGoal model.currentEditGoal.id)) ] ] [text "Submit"] 
-                                ]
-                            ]
-
                 
-                ]
-            |> Modal.footer []
-                [ Button.button
-                    [ Button.outlinePrimary
-                    , Button.attrs [ onClick (EditModalMsg Modal.hiddenState)]
+            ],
+        Grid.container []
+            [ div [ class "jumbotron text-center" ] 
+                    [ 
+                        h1 [ class "large-cursive-title" ] [ text "Achieve." ]
+                    ],
+                Grid.row []
+                    [ Grid.col []
+                        [
+                            div [ class "text-center scoreboard" ] 
+                            [ 
+                                h2 [ class "score"] [ text (toString model.score)  ]
+                            ]  
+                        ]
+                    ],
+                Grid.row []
+                [                                                                           
+                    Grid.col [ Col.attrs [ class "goal-grid" ] ]
+                        [ renderGoals model.goals ]
+                ],
+                Modal.config EditModalMsg
+                |> Modal.small
+                |> Modal.h1 [] [ text "Edit Goal" ]
+                |> Modal.body [] 
+                    [ 
+                    h2 [] [ text model.currentEditGoal.name],
+                    Form.form []
+                                [ Form.group []
+                                    [ 
+                                        Form.label [ for "goalNameInput" ] [ text "Name: " ],
+                                        Input.text [ Input.attrs [id "goalNameInput", onInput ChangeCurrentGoalName ] ],
+                                        Form.label [ for "goalScoreInput" ] [ text "Goal Value: " ],
+                                        Input.text [ Input.attrs [ id "goalScoreInput", onInput ChangeCurrentGoalScore  ] ],
+                                        Form.label [ for "deadlineInput"] [ text "Select a goal deadline: " ],
+                                        Input.date [ Input.attrs [id "deadlineInput", onInput ChangeCurrentDeadline ]],
+                                        Button.button [Button.primary, Button.attrs [ onWithOptions "click" (Options False True) (Decode.succeed (EditGoal model.currentEditGoal.id)) ] ] [text "Submit"] 
+                                    ]
+                                ]
+
+                    
                     ]
-                    [ text "Close" ]
-                ]
-            |> Modal.view model.modalState
+                |> Modal.footer []
+                    [ Button.button
+                        [ Button.outlinePrimary
+                        , Button.attrs [ onClick (EditModalMsg Modal.hiddenState)]
+                        ]
+                        [ text "Close" ]
+                    ]
+                |> Modal.view model.modalState
+            ]
         ]
 
 
@@ -301,7 +301,7 @@ renderGoals goals =
     ListGroup.ul
         (List.map 
                 (\goal -> 
-                    ListGroup.li [ ListGroup.attrs [class "text-center"] ] 
+                    ListGroup.li [ ListGroup.attrs [class "text-center achieve-goal"] ] 
                     [ 
                         Checkbox.checkbox [Checkbox.checked goal.completed, Checkbox.inline, Checkbox.success, Checkbox.attrs [class "list-checkbox", onClick (ToggleScore goal)] ] "",
                         Form.label [] 
