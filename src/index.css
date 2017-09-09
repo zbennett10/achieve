@@ -29,3 +29,20 @@ h2, h3, h4, h5, h6 {
     width: 37px;
     height: 37px;
 }
+
+.scoreboard {
+    border: 25px solid white;
+    height: 200px;
+    width: 200px;
+    border-radius: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    box-shadow: 3px 3px 2px black;
+    padding: 20px;
+    overflow: hidden;
+}
+
+.score {
+    font-size: 3vw;
+    margin-top: 35%;
+}

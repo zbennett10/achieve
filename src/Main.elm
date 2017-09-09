@@ -5,7 +5,7 @@ import Html exposing (..)
 import Html.Events exposing (..)
 import Html.Attributes exposing (..)
 import Json.Decode as Decode
-import Json.Decode.Extra exposing (fromResult)
+import Json.Decode.Extra exposing (..)
 import Json.Encode
 import Date exposing (..)
 import Date.Extra.Format as DateFormat exposing (format)
@@ -16,7 +16,6 @@ import Json.Helpers exposing (..)
 
 --Elm Bootstrap
 import Bootstrap.Grid as Grid
-import Bootstrap.Grid.Col as Col
 import Bootstrap.Button as Button
 import Bootstrap.Modal as Modal
 import Bootstrap.ListGroup as ListGroup
@@ -24,6 +23,8 @@ import Bootstrap.Form as Form
 import Bootstrap.Form.Input as Input
 import Bootstrap.Form.Checkbox as Checkbox
 import Bootstrap.Modal as Modal
+import Bootstrap.Accordion as Accordion
+import Bootstrap.Card as Card
 
 
 --sort goals by date
@@ -68,7 +69,8 @@ type alias Model =
         currentGoalScore : String,
         currentDeadline : String,
         modalState: Modal.State,
-        currentEditGoal : Goal
+        currentEditGoal : Goal,
+        accordionState : Accordion.State
     }
 
 --INIT
@@ -76,7 +78,7 @@ emptyGoal : Goal
 emptyGoal = Goal 0 "" "" False ""
 
 initialModel : Model
-initialModel = Model 1000 [Goal 1 "Love Kalie Forever" "100" False "October 11, 1991"] "" "" "October 11, 1991" Modal.hiddenState emptyGoal
+initialModel = Model 1000 [Goal 1 "Love Kalie Forever" "100" False "October 11, 1991"] "" "" "October 11, 1991" Modal.hiddenState emptyGoal Accordion.initialState
       
           
 init : Decode.Value -> (Model, Cmd Msg)
@@ -90,6 +92,7 @@ type Msg = NoOp
     | ToggleGoalComplete Int Bool
     | UpdateGoalName Int String
     | ToggleScore Goal
+    | SubtractScore String 
     | ChangeCurrentGoalName String
     | ChangeCurrentGoalScore String
     | ChangeCurrentDeadline String
@@ -99,6 +102,7 @@ type Msg = NoOp
     | EditModalMsg Modal.State
     | PopulateEditModal Goal
     | SetCurrentEditGoal Goal
+    | GoalAccordionMsg Accordion.State
 
 --UPDATE--
 
@@ -150,19 +154,28 @@ update msg model =
             ({ model | currentGoalScore = score }, Cmd.none)
         ChangeCurrentDeadline dateString ->
             ({ model | currentDeadline = dateString }, Cmd.none)
+
+        SubtractScore goalScore ->
+            goalScore
+            |> String.toInt
+            |> Result.withDefault 0
+            |> subtractScore model
         
         SetModel newModel ->
             ( newModel, Cmd.none )
 
         DeleteGoal id -> 
             let
-                goal =
-                    findGoalByID model.goals id
-
-                goalIndex =
-                    findGoalIndex model.goals id
+                goal = findGoalByID model.goals id
+                goalIndex = findGoalIndex model.goals id
+                isCompleted = goal.completed
+                worth = goal.value
             in
-                ({model | goals = removeAt goalIndex model.goals }, Cmd.none)
+                if isCompleted == True then
+                    ({model | goals = removeAt goalIndex model.goals })
+                    |> update (SubtractScore worth)
+                else
+                    ({model | goals = removeAt goalIndex model.goals }, Cmd.none)
 
         EditGoal id ->
             let
@@ -189,6 +202,9 @@ update msg model =
             { model | currentEditGoal = findGoalByID model.goals goal.id }
             |> update (EditModalMsg Modal.visibleState)
 
+        GoalAccordionMsg state ->
+            ( { model | accordionState = state }, sendModelToStorage model )
+
 
         
               
@@ -213,8 +229,10 @@ view model =
             Grid.row []
                 [ Grid.col []
                     [
-                        h1 [ class "text-center" ] [ text "Overall Score" ],
-                        h2 [ class "text-center" ] [ text (toString model.score) ]  
+                        div [ class "text-center scoreboard" ] 
+                        [ 
+                            h2 [ class "score"] [ text (toString model.score)  ]
+                        ]  
                     ]
                 ],
             Grid.row []
@@ -237,16 +255,9 @@ view model =
                     ],
                 Grid.col []
                     [
-                        h1 [ class "text-center" ] [ text "Upcoming Goals" ],
+                        h1 [ class "text-center" ] [ text "Goals" ],
                         renderGoals model.goals
                     ]
-            ],
-            Grid.row []
-            [
-                Grid.col []
-                [
-                    h1 [ class "text-center" ] [ text model.currentDeadline ]
-                ]
             ],
             Modal.config EditModalMsg
             |> Modal.small
@@ -363,6 +374,10 @@ dateToString : Date -> String
 dateToString date =
     DateFormat.format DateConfig.config "%d-%b-%Y" date
 
+subtractScore : Model -> Int -> (Model, Cmd Msg)
+subtractScore model goalScore =
+    ({model | score = model.score - goalScore}, Cmd.none)
+
 
 sendModelToStorage : Model -> Cmd Msg
 sendModelToStorage model =
@@ -416,17 +431,26 @@ decodeEditModalState bool =
         False ->
             Decode.succeed Modal.hiddenState
 
+decodeAccordionState : Bool -> Decode.Decoder Accordion.State
+decodeAccordionState bool =
+    case bool of
+        True ->
+            Decode.succeed Accordion.initialState
+        False ->
+            Decode.succeed Accordion.initialState
+
 
 modelDecoder : Decode.Decoder Model
 modelDecoder =
-    Decode.map7 Model
+    Decode.map8 Model
         ("score" := Decode.int)
         ("goals" := (Decode.list goalDecoder))
         ("currentGoalName" := Decode.string)
         ("currentGoalScore" := Decode.string)
         ("currentDeadline" := Decode.string)
-        ("modalState" := Decode.bool |> Decode.andThen decodeEditModalState)
+        ("modalState" := Decode.bool |> Decode.andThen decodeEditModalState )
         ("currentEditGoal" := goalDecoder)
+        ("accordionState" := Decode.bool |> Decode.andThen decodeAccordionState )
 
 goalDecoder : Decode.Decoder Goal
 goalDecoder =
