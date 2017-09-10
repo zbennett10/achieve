@@ -48,15 +48,21 @@ h2, h3, h4, h5, h6 {
     margin-top: 35%;
 }
 
+.modal-content {
+    width: 600px;
+}
+
 .list-group {
-    -webkit-flex-direction: row;
+    /*-webkit-flex-direction: row;*/
     padding: 15px;
-    flex-direction: row;
+    /*flex-direction: row;*/
+    display: block !important;
     overflow-y: auto;
     border: 5px solid #1F5846;
 }
 
 .achieve-goal {
+    display: inline-block !important;
     width: 500px;
     min-width: 500px;
     margin: 15px;
@@ -74,7 +80,7 @@ h2, h3, h4, h5, h6 {
     background: #1F5846;
 }
 
-.new-goal-form * {
+.new-goal-form label {
     max-width: 250px;
     color: white;
 }

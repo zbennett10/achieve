@@ -229,7 +229,9 @@ view model =
                     [ Form.group []
                         [ 
                             Form.label [ for "goalNameInput" ] [ text "Name" ],
-                            Input.text [ Input.attrs [id "goalNameInput", onInput ChangeCurrentGoalName ] ],
+                            Input.text [ Input.value model.currentGoalName
+                                       , Input.attrs [id "goalNameInput", onInput ChangeCurrentGoalName ] 
+                                       ],
                             Form.label [ for "goalScoreInput" ] [ text "Value" ],
                             Input.text [ Input.attrs [ id "goalScoreInput", onInput ChangeCurrentGoalScore  ] ],
                             Form.label [ for "deadlineInput"] [ text "Deadline" ],
