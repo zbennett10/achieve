@@ -258,7 +258,9 @@ view model =
                 Grid.row []
                 [                                                                           
                     Grid.col [ Col.attrs [ class "goal-grid" ] ]
-                        [ renderGoals model.goals ]
+                        [ model.goals
+                          |> renderGoals
+                        ]
                 ],
                 Modal.config EditModalMsg
                 |> Modal.small
@@ -365,6 +367,19 @@ findGoalByID goals id =
             Goal (createNewID (findMaxID goals)) "Example Goal" "10" False (toString Time.now)
         Just goal ->
             goal
+
+convertDeadlineToTime : Goal -> Int
+convertDeadlineToTime goal =
+    goal.deadline
+    |> stringToDate
+    |> Date.toTime
+    |> Time.inMilliseconds
+    |> Basics.round
+
+-- sortGoalsByDate : List Goal -> List Goal
+-- sortGoalsByDate goals =
+--    List.map convertDeadlineToTime goal
+--    List.sortBy .deadline goals
       
 
 stringToDate : String -> Date
