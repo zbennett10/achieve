@@ -72,7 +72,8 @@ type alias Model =
         currentDeadline : String,
         modalState: Modal.State,
         currentEditGoal : Goal,
-        accordionState : Accordion.State
+        accordionState : Accordion.State,
+        flyoutClass : String
     }
 
 --INIT
@@ -80,7 +81,7 @@ emptyGoal : Goal
 emptyGoal = Goal 0 "" "" False ""
 
 initialModel : Model
-initialModel = Model 1000 [Goal 1 "Love Kalie Forever" "100" False "October 11, 1991"] "" "" "October 11, 1991" Modal.hiddenState emptyGoal Accordion.initialState
+initialModel = Model 1000 [Goal 1 "Love Kalie Forever" "100" False "October 11, 1991"] "" "" "October 11, 1991" Modal.hiddenState emptyGoal Accordion.initialState "hide"
       
           
 init : Decode.Value -> (Model, Cmd Msg)
@@ -105,6 +106,7 @@ type Msg = NoOp
     | PopulateEditModal Goal
     | SetCurrentEditGoal Goal
     | GoalAccordionMsg Accordion.State
+    | ToggleFlyout
 
 --UPDATE--
 
@@ -207,6 +209,18 @@ update msg model =
         GoalAccordionMsg state ->
             ( { model | accordionState = state }, sendModelToStorage model )
 
+        ToggleFlyout ->
+            let
+                currentFlyoutClass = model.flyoutClass
+            
+            in
+                if currentFlyoutClass == "hide" then
+                    ( { model | flyoutClass = "show" }, Cmd.none )
+                else
+                    ( { model | flyoutClass = "hide" }, Cmd.none )
+
+                
+
 
         
               
@@ -223,7 +237,7 @@ subscriptions model =
 view : Model -> Html Msg
 view model = 
     div [ id "AchieveApp" ]
-        [ div [ class "new-goal-flyout" ]
+        [ div [ class ("new-goal-flyout "++model.flyoutClass) ]
             [ h1 [ class "text-center" ] [ text "Create Goal" ],
                 Form.form [ class "new-goal-form" ]
                     [ Form.group []
@@ -459,15 +473,16 @@ decodeAccordionState bool =
 
 modelDecoder : Decode.Decoder Model
 modelDecoder =
-    Decode.map8 Model
-        ("score" := Decode.int)
-        ("goals" := (Decode.list goalDecoder))
-        ("currentGoalName" := Decode.string)
-        ("currentGoalScore" := Decode.string)
-        ("currentDeadline" := Decode.string)
-        ("modalState" := Decode.bool |> Decode.andThen decodeEditModalState )
-        ("currentEditGoal" := goalDecoder)
-        ("accordionState" := Decode.bool |> Decode.andThen decodeAccordionState )
+    Decode.succeed Model
+        |: ("score" := Decode.int)
+        |: ("goals" := (Decode.list goalDecoder))
+        |: ("currentGoalName" := Decode.string)
+        |: ("currentGoalScore" := Decode.string)
+        |: ("currentDeadline" := Decode.string)
+        |: ("modalState" := Decode.bool |> Decode.andThen decodeEditModalState )
+        |: ("currentEditGoal" := goalDecoder)
+        |: ("accordionState" := Decode.bool |> Decode.andThen decodeAccordionState )
+        |: ("flyoutClass" := Decode.string)
 
 goalDecoder : Decode.Decoder Goal
 goalDecoder =
