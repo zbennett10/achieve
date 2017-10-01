@@ -25,7 +25,6 @@ import Bootstrap.Form as Form
 import Bootstrap.Form.Input as Input
 import Bootstrap.Form.Checkbox as Checkbox
 import Bootstrap.Modal as Modal
-import Bootstrap.Accordion as Accordion
 import Bootstrap.Card as Card
 
 
@@ -72,8 +71,8 @@ type alias Model =
         currentDeadline : String,
         modalState: Modal.State,
         currentEditGoal : Goal,
-        accordionState : Accordion.State,
-        flyoutClass : String
+        flyoutClass : String,
+        flyoutTogglerClass : String
     }
 
 --INIT
@@ -81,7 +80,7 @@ emptyGoal : Goal
 emptyGoal = Goal 0 "" "" False ""
 
 initialModel : Model
-initialModel = Model 1000 [Goal 1 "Love Kalie Forever" "100" False "October 11, 1991"] "" "" "October 11, 1991" Modal.hiddenState emptyGoal Accordion.initialState "hide"
+initialModel = Model 1000 [Goal 1 "Love Kalie Forever" "100" False "October 11, 1991"] "" "" "October 11, 1991" Modal.hiddenState emptyGoal " " " "
       
           
 init : Decode.Value -> (Model, Cmd Msg)
@@ -105,7 +104,6 @@ type Msg = NoOp
     | EditModalMsg Modal.State
     | PopulateEditModal Goal
     | SetCurrentEditGoal Goal
-    | GoalAccordionMsg Accordion.State
     | ToggleFlyout
 
 --UPDATE--
@@ -153,11 +151,11 @@ update msg model =
                 |> update (ToggleGoalComplete goal.id False)
 
         ChangeCurrentGoalName name ->
-            ({ model | currentGoalName = name }, Cmd.none)
+            ({ model | currentGoalName = name }, sendModelToStorage model)
         ChangeCurrentGoalScore score ->
-            ({ model | currentGoalScore = score }, Cmd.none)
+            ({ model | currentGoalScore = score }, sendModelToStorage model)
         ChangeCurrentDeadline dateString ->
-            ({ model | currentDeadline = dateString }, Cmd.none)
+            ({ model | currentDeadline = dateString }, sendModelToStorage model)
 
         SubtractScore goalScore ->
             goalScore
@@ -166,7 +164,7 @@ update msg model =
             |> subtractScore model
         
         SetModel newModel ->
-            ( newModel, Cmd.none )
+            ( newModel, sendModelToStorage model )
 
         DeleteGoal id -> 
             let
@@ -179,7 +177,7 @@ update msg model =
                     ({model | goals = removeAt goalIndex model.goals })
                     |> update (SubtractScore worth)
                 else
-                    ({model | goals = removeAt goalIndex model.goals }, Cmd.none)
+                    ({model | goals = removeAt goalIndex model.goals }, sendModelToStorage model)
 
         EditGoal id ->
             let
@@ -206,18 +204,15 @@ update msg model =
             { model | currentEditGoal = findGoalByID model.goals goal.id }
             |> update (EditModalMsg Modal.visibleState)
 
-        GoalAccordionMsg state ->
-            ( { model | accordionState = state }, sendModelToStorage model )
-
         ToggleFlyout ->
             let
                 currentFlyoutClass = model.flyoutClass
             
             in
-                if currentFlyoutClass == "hide" then
-                    ( { model | flyoutClass = "show" }, Cmd.none )
+                if currentFlyoutClass == "flyout-extended" then
+                    ( { model | flyoutClass = " ", flyoutTogglerClass = " " }, sendModelToStorage model)
                 else
-                    ( { model | flyoutClass = "hide" }, Cmd.none )
+                    ( { model | flyoutClass = "flyout-extended", flyoutTogglerClass = "flyout-toggler-extended" }, sendModelToStorage model)
 
                 
 
@@ -254,8 +249,13 @@ view model =
                         ]
                     ]
                 
-            ],
-        Grid.container []
+            ]
+        , div [ class ("flyout-toggler "++model.flyoutTogglerClass), onClick ToggleFlyout ]
+        [ div [ class "toggler-circle" ] [ text "A" ]
+        , div [ class "toggler-circle" ] [ text "D" ]
+        , div [ class "toggler-circle" ] [ text "D" ]
+        ]
+        , Grid.container []
             [ div [ class "jumbotron text-center" ] 
                     [ 
                         h1 [ class "large-cursive-title" ] [ text "Achieve." ]
@@ -426,7 +426,9 @@ encodeModel model =
             ("currentGoalScore", Json.Encode.string model.currentGoalScore),
             ("currentDeadline", Json.Encode.string model.currentDeadline),
             ("modalState", encodeEditModalState model.modalState),
-            ("currentEditGoal", encodeGoal model.currentEditGoal)
+            ("currentEditGoal", encodeGoal model.currentEditGoal),
+            ("flyoutClass", Json.Encode.string model.flyoutClass),
+            ("flyoutTogglerClass", Json.Encode.string model.flyoutTogglerClass)
         ]
 
 --encode an individual goal for local storage
@@ -446,7 +448,6 @@ decodeModel : Decode.Value -> Result String Model
 decodeModel modelJson = 
     Decode.decodeValue modelDecoder modelJson
 
-
 encodeEditModalState : Modal.State -> Json.Encode.Value
 encodeEditModalState state =
     case state of
@@ -462,15 +463,6 @@ decodeEditModalState bool =
         False ->
             Decode.succeed Modal.hiddenState
 
-decodeAccordionState : Bool -> Decode.Decoder Accordion.State
-decodeAccordionState bool =
-    case bool of
-        True ->
-            Decode.succeed Accordion.initialState
-        False ->
-            Decode.succeed Accordion.initialState
-
-
 modelDecoder : Decode.Decoder Model
 modelDecoder =
     Decode.succeed Model
@@ -481,8 +473,8 @@ modelDecoder =
         |: ("currentDeadline" := Decode.string)
         |: ("modalState" := Decode.bool |> Decode.andThen decodeEditModalState )
         |: ("currentEditGoal" := goalDecoder)
-        |: ("accordionState" := Decode.bool |> Decode.andThen decodeAccordionState )
         |: ("flyoutClass" := Decode.string)
+        |: ("flyoutTogglerClass" := Decode.string)
 
 goalDecoder : Decode.Decoder Goal
 goalDecoder =
@@ -500,4 +492,5 @@ mapLocalStorageInput modelJson =
             (model, Cmd.none)
         
         Err message ->
+            Debug.log message
             (initialModel,  Cmd.none)

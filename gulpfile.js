@@ -19,14 +19,16 @@ gulp.task('elm', ['elm-init'], function() {
     return gulp.src(paths.elm)
         .pipe(plumber())
         .pipe(elm())
-        .pipe(gulp.dest(paths.dest));
+        .pipe(gulp.dest(paths.dest))
+        .pipe(connect.reload());
 });
 
 //move static assets to dist
 gulp.task('static', function() {
     return gulp.src(paths.static)
         .pipe(plumber())
-        .pipe(gulp.dest(paths.dest));
+        .pipe(gulp.dest(paths.dest))
+        .pipe(connect.reload());
 });
 
 //watch for changes
@@ -39,6 +41,7 @@ gulp.task('watch', function() {
 gulp.task('connect', function() {
     connect.server({
         root: 'dist',
+        livereload: true,
         port: 5050
     });
 });

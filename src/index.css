@@ -73,24 +73,70 @@ h2, h3, h4, h5, h6 {
 
 .new-goal-flyout {
     position: absolute;
-    float: left;
+    left: -405px;
     top: 100px;
+    z-index: 1000;
     max-width: 400px;
     margin-left: 15px;
     padding: 15px;
+    transition: transform .5s;
     background: #1F5846;
     box-shadow: 0 8px 8px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.2), 0 1px 5px 0 rgba(0,0,0,0.12); /* credit to this box-shadow goes to Google Keep */
 }
 
+.flyout-extended {
+    transform: translateX(390px);    
+}
+
+.flyout-toggler {
+    position: absolute;
+    left: 0px;
+    top: 260px;
+    padding: 3px;
+    transition: transform .5s;
+    height: 63px;
+    width:22px;
+    cursor: pointer;
+    z-index: 1000;
+}
+
+.flyout-toggler:hover {
+    opacity: .7;
+}
+
+.flyout-toggler:active {
+    opacity: 1;
+}
+
+
+.flyout-toggler-extended {
+    transform: translateX(250px);
+}
+
+.toggler-circle {
+    text-align: center;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px;
+    height: 20px;
+    width: 20px;
+    background: burlywood;
+}
+
 .hide {
-    display: none;
+    visibility: hidden;
 }
 
 .show {
-    display: block;
+    visibility: visible;
 }
 
 .new-goal-form label {
     max-width: 250px;
     color: white;
+}
+
+.goal-grid {
+    margin-bottom: 50px;
 }
